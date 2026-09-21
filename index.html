@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mis Colecciones</title>
+<style>
+  :root{
+    --ink:#14110f; --panel:#1e1a16; --panel2:#26201a; --border:#3a3128;
+    --text:#ede6d6; --muted:#9c9284; --brass:#c9a227; --brass-dark:#9c7d1c;
+    --copper:#b0703f; --green:#7fae6a; --red:#c1594a; --blue:#7a9bc2;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--ink); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  h1,h2,h3{font-family:Georgia,"Iowan Old Style","Palatino Linotype",serif; font-weight:600; margin:0;}
+  a{color:var(--brass);}
+  .wrap{max-width:1100px;margin:0 auto;padding:20px 16px 60px;}
+  header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);}
+  header.top h1{font-size:1.3rem;letter-spacing:.02em;color:var(--brass);}
+  header.top .sub{font-size:.75rem;color:var(--muted);}
+  .userbox{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--muted);}
+  .userbox img{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);}
+
+  .btn{
+    background:var(--panel2); color:var(--text); border:1px solid var(--border);
+    padding:9px 14px; border-radius:8px; font-size:.85rem; cursor:pointer;
+    display:inline-flex; align-items:center; gap:6px; white-space:nowrap;
+  }
+  .btn:hover{border-color:var(--brass);}
+  .btn.primary{background:var(--brass); color:#1c1508; border-color:var(--brass); font-weight:600;}
+  .btn.primary:hover{background:var(--brass-dark);}
+  .btn.danger{background:transparent;border-color:var(--red);color:var(--red);}
+  .btn.small{padding:5px 9px;font-size:.72rem;}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+
+  input,select,textarea{
+    background:var(--panel2); border:1px solid var(--border); color:var(--text);
+    border-radius:7px; padding:9px 10px; font-size:.88rem; width:100%; font-family:inherit;
+  }
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--brass);}
+  label{display:block;font-size:.72rem;color:var(--muted);margin-bottom:4px;letter-spacing:.02em;}
+  .field{margin-bottom:12px;}
+
+  /* ---------- Login ---------- */
+  #view-login{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center;padding:20px;}
+  #view-login h1{font-size:2rem;color:var(--brass);}
+  #view-login p{color:var(--muted);max-width:360px;font-size:.92rem;}
+  .google-btn{display:flex;align-items:center;gap:10px;background:#fff;color:#1c1c1c;border:none;border-radius:8px;padding:11px 22px;font-size:.95rem;font-weight:600;cursor:pointer;}
+
+  /* ---------- Layout de colecciones ---------- */
+  .crumbs{font-size:.82rem;color:var(--muted);padding:12px 0;}
+  .crumbs a{cursor:pointer;text-decoration:none;}
+  .grid-cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-top:16px;}
+  .col-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:border-color .15s;}
+  .col-card:hover{border-color:var(--brass);}
+  .col-card .icon{font-size:1.8rem;}
+  .col-card h3{font-size:1.02rem;margin:8px 0 4px;}
+  .col-card .meta{font-size:.75rem;color:var(--muted);}
+  .col-card .bar{height:6px;background:var(--panel2);border-radius:3px;overflow:hidden;margin-top:10px;}
+  .col-card .bar > div{height:100%;background:linear-gradient(90deg,var(--copper),var(--brass));}
+  .empty-state{text-align:center;padding:50px 20px;color:var(--muted);border:1px dashed var(--border);border-radius:12px;margin-top:20px;}
+
+  /* ---------- Toolbar colección ---------- */
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0;}
+  .toolbar .stat{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:.8rem;}
+  .toolbar .stat b{font-size:1.05rem;color:var(--brass);display:block;}
+  .searchbar{flex:1;min-width:160px;}
+
+  /* ---------- Tabla checklist ---------- */
+  .table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;-webkit-overflow-scrolling:touch;max-height:70vh;overflow-y:auto;}
+  table{border-collapse:collapse;width:100%;font-size:.83rem;}
+  thead th{position:sticky;top:0;background:var(--panel2);text-align:left;padding:9px 10px;font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);z-index:2;}
+  tbody td{padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap;}
+  tbody tr.got{background:rgba(127,174,106,.08);}
+  th:first-child,td:first-child{position:sticky;left:0;background:var(--panel);z-index:1;}
+  thead th:first-child{background:var(--panel2);z-index:3;}
+  tbody tr:hover td{background:var(--panel2);}
+  tbody tr:hover td:first-child{background:var(--panel2);}
+  input[type=checkbox]{width:18px;height:18px;cursor:pointer;accent-color:var(--brass);}
+
+  /* ---------- Tarjetas libres ---------- */
+  .card-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:14px;}
+  .item-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;}
+  .item-card h4{font-size:.95rem;margin-bottom:6px;}
+  .item-card .row{font-size:.78rem;color:var(--muted);margin-bottom:2px;}
+  .item-card .actions{display:flex;gap:6px;margin-top:10px;}
+  .item-card img.thumb{width:100%;height:120px;object-fit:cover;border-radius:6px;margin-bottom:8px;}
+
+  /* ---------- Modal ---------- */
+  .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:16px;}
+  .backdrop.open{display:flex;}
+  .modal{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:22px;max-width:520px;width:100%;max-height:88vh;overflow-y:auto;}
+  .modal h2{font-size:1.15rem;margin-bottom:16px;color:var(--brass);}
+  .modal-close{float:right;background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;}
+  .option-row{display:flex;flex-direction:column;gap:10px;margin:14px 0;}
+  .option-btn{text-align:left;background:var(--panel2);border:1px solid var(--border);border-radius:9px;padding:12px 14px;cursor:pointer;}
+  .option-btn:hover{border-color:var(--brass);}
+  .option-btn b{display:block;font-size:.92rem;margin-bottom:2px;}
+  .option-btn span{font-size:.76rem;color:var(--muted);}
+
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--brass);color:var(--text);padding:10px 18px;border-radius:8px;font-size:.82rem;z-index:100;display:none;}
+
+  .hist-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:.82rem;}
+  .hist-row .bar-bg{flex:1;height:8px;background:var(--panel2);border-radius:4px;overflow:hidden;}
+  .hist-row .bar-bg > div{height:100%;background:var(--brass);}
+
+  #print-area{display:none;}
+  @media print{
+    body *{visibility:hidden;}
+    #print-area, #print-area *{visibility:visible;}
+    #print-area{display:block;position:absolute;top:0;left:0;width:100%;padding:20px;color:#000;background:#fff;}
+    #print-area .pitem{padding:4px 0;border-bottom:1px solid #ccc;font-size:12px;}
+  }
+
+  @media (max-width:680px){
+    .wrap{padding:12px 10px 50px;}
+    header.top{flex-direction:column;align-items:flex-start;gap:8px;}
+    .grid-cols{grid-template-columns:1fr;}
+    table{font-size:.76rem;}
+    thead th,tbody td{padding:7px 8px;}
+    .modal{padding:16px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============== LOGIN ============== -->
+<div id="view-login">
+  <div>
+    <h1>📚 Mis Colecciones</h1>
+    <p>Catalogación y seguimiento de cromos, monedas y objetos de colección, sincronizado entre todos tus dispositivos.</p>
+  </div>
+  <button class="google-btn" id="btn-google">
+    <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.66 9c0-.59.1-1.17.29-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.97L3.95 7.3C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
+    Iniciar sesión con Google
+  </button>
+  <p style="font-size:.7rem;">Tus datos son privados: solo tu cuenta puede verlos y editarlos.</p>
+</div>
+
+<!-- ============== APP ============== -->
+<div id="view-app" style="display:none;">
+  <header class="top">
+    <div>
+      <h1>📚 Mis Colecciones</h1>
+      <div class="sub">Catalogación y seguimiento</div>
+    </div>
+    <div class="userbox">
+      <img id="user-avatar" src="" alt="">
+      <span id="user-name"></span>
+      <button class="btn small" id="btn-logout">Salir</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="crumbs" id="crumbs"></div>
+
+    <!-- Vista: listado de colecciones -->
+    <div id="view-list">
+      <div class="toolbar">
+        <button class="btn primary" id="btn-new-collection">+ Nueva colección</button>
+      </div>
+      <div id="collections-grid" class="grid-cols"></div>
+      <div id="collections-empty" class="empty-state" style="display:none;">
+        Aún no tienes ninguna colección. Crea la primera con "+ Nueva colección".
+      </div>
+    </div>
+
+    <!-- Vista: detalle de una colección -->
+    <div id="view-detail" style="display:none;">
+      <div class="toolbar">
+        <h2 id="detail-title" style="font-size:1.3rem;color:var(--brass);"></h2>
+      </div>
+      <div class="toolbar" id="detail-stats"></div>
+      <div class="toolbar">
+        <input class="searchbar" id="detail-search" placeholder="Buscar...">
+        <button class="btn" id="btn-add-item">+ Añadir elemento</button>
+        <button class="btn" id="btn-snapshot">📸 Guardar snapshot / Informe</button>
+        <button class="btn" id="btn-history">📈 Ver historial</button>
+        <button class="btn" id="btn-collection-settings">⚙️</button>
+      </div>
+      <div id="detail-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============== MODALES ============== -->
+
+<!-- Nueva colección: elegir tipo -->
+<div class="backdrop" id="modal-new-collection">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-new-collection')">✕</button>
+    <h2>Nueva colección</h2>
+    <div class="field"><label>Nombre de la colección</label><input id="nc-name" placeholder="Ej. Cajas metálicas antiguas"></div>
+    <div class="field"><label>Icono (un emoji)</label><input id="nc-icon" placeholder="📦" maxlength="2" value="📦"></div>
+    <label>¿Cómo quieres empezarla?</label>
+    <div class="option-row">
+      <div class="option-btn" onclick="selectNewCollectionMode('libre')">
+        <b>📋 Ficha libre (sin checklist previa)</b>
+        <span>Vas añadiendo elementos según los consigues. Ideal para cajas, objetos únicos, piezas sueltas...</span>
+      </div>
+      <div class="option-btn" onclick="selectNewCollectionMode('import')">
+        <b>📥 Importar checklist (Excel / CSV)</b>
+        <span>Ya tienes o consigues un listado completo (cromos, monedas...) y lo subes de una vez.</span>
+      </div>
+      <div class="option-btn" onclick="selectNewCollectionMode('ask')">
+        <b>🔎 Pídeme que te la construya</b>
+        <span>Dime en el chat qué colección es (ej. "álbum Panini Liga 2025-26") y la investigo y preparo por ti.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Definir campos para colección libre -->
+<div class="backdrop" id="modal-libre-fields">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-libre-fields')">✕</button>
+    <h2>Campos de la ficha</h2>
+    <p style="font-size:.8rem;color:var(--muted);">Define qué datos quieres anotar de cada elemento. Puedes editarlo luego.</p>
+    <div id="libre-fields-list"></div>
+    <button class="btn small" onclick="addLibreFieldRow()">+ Añadir campo</button>
+    <div style="margin-top:18px;text-align:right;">
+      <button class="btn primary" onclick="createLibreCollection()">Crear colección</button>
+    </div>
+  </div>
+</div>
+
+<!-- Importar archivo -->
+<div class="backdrop" id="modal-import">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-import')">✕</button>
+    <h2>Importar checklist</h2>
+    <div class="field"><label>Archivo Excel (.xlsx) o CSV</label><input type="file" id="import-file" accept=".xlsx,.xls,.csv"></div>
+    <div id="import-mapping" style="display:none;">
+      <div class="field"><label>Columna que identifica cada elemento (código/número)</label><select id="import-col-codigo"></select></div>
+      <div class="field"><label>Columna con el nombre/descripción</label><select id="import-col-nombre"></select></div>
+      <p style="font-size:.76rem;color:var(--muted);">El resto de columnas se guardarán también como datos adicionales de cada elemento.</p>
+      <div style="text-align:right;"><button class="btn primary" onclick="confirmImport()">Importar</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Añadir / editar elemento -->
+<div class="backdrop" id="modal-item">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-item')">✕</button>
+    <h2 id="item-modal-title">Nuevo elemento</h2>
+    <div id="item-form-fields"></div>
+    <div class="field"><label>📷 Foto (opcional)</label><input type="file" accept="image/*" id="item-foto-input"><div id="item-foto-preview" style="margin-top:8px;"></div></div>
+    <div style="margin-top:16px;text-align:right;">
+      <button class="btn primary" onclick="saveItemFromModal()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Historial -->
+<div class="backdrop" id="modal-history">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-history')">✕</button>
+    <h2>Historial de progreso</h2>
+    <div id="history-list"></div>
+  </div>
+</div>
+
+<!-- Ajustes colección -->
+<div class="backdrop" id="modal-settings">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-settings')">✕</button>
+    <h2>Ajustes de la colección</h2>
+    <div class="field"><label>Nombre</label><input id="set-name"></div>
+    <div class="field"><label>Icono</label><input id="set-icon" maxlength="2"></div>
+    <div style="margin:16px 0;"><button class="btn danger" onclick="deleteCurrentCollection()">🗑 Eliminar colección completa</button></div>
+    <div style="text-align:right;"><button class="btn primary" onclick="saveCollectionSettings()">Guardar cambios</button></div>
+  </div>
+</div>
+
+<div id="print-area"></div>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+/* =========================================================================
+   CONFIGURACIÓN DE FIREBASE
+   Sustituye este objeto por el que te da la consola de Firebase
+   (Configuración del proyecto > Tus apps > icono "</>")
+   ========================================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyAnld8H_FSy9-NmKDcu-sF57NVHZZkZcF8",
+  authDomain: "gestion-de-colecciones-b35c1.firebaseapp.com",
+  projectId: "gestion-de-colecciones-b35c1",
+  storageBucket: "gestion-de-colecciones-b35c1.firebasestorage.app",
+  messagingSenderId: "110749209572",
+  appId: "1:110749209572:web:5904697d99e6ffb1516df1"
+};
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
+  getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc,
+  deleteDoc, query, orderBy, onSnapshot, writeBatch, increment, serverTimestamp, Timestamp
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+/* =========================================================================
+   ESTADO GLOBAL
+   ========================================================================= */
+let currentUser = null;
+let collectionsCache = [];          // [{id, name, icon, type, fields, stats}]
+let currentCollectionId = null;
+let currentCollectionMeta = null;
+let currentItems = [];              // items de la colección abierta
+let unsubItems = null;
+let unsubCollections = null;
+let libreFieldDraft = [];
+let editingItemId = null;
+let importParsedRows = null;
+let importHeaders = [];
+
+/* =========================================================================
+   AUTENTICACIÓN
+   ========================================================================= */
+document.getElementById('btn-google').onclick = () => {
+  signInWithPopup(auth, provider).catch(e => showToast('Error al iniciar sesión: ' + e.message));
+};
+document.getElementById('btn-logout').onclick = () => signOut(auth);
+
+onAuthStateChanged(auth, (user) => {
+  currentUser = user;
+  if (user) {
+    document.getElementById('view-login').style.display = 'none';
+    document.getElementById('view-app').style.display = 'block';
+    document.getElementById('user-avatar').src = user.photoURL || '';
+    document.getElementById('user-name').textContent = user.displayName || user.email || '';
+    listenCollections();
+    navList();
+  } else {
+    document.getElementById('view-login').style.display = 'flex';
+    document.getElementById('view-app').style.display = 'none';
+    if (unsubCollections) unsubCollections();
+    if (unsubItems) unsubItems();
+  }
+});
+
+function uid(){ return currentUser.uid; }
+function colPath(){ return `users/${uid()}/collections`; }
+function itemsPath(cid){ return `users/${uid()}/collections/${cid}/items`; }
+function photosPath(cid){ return `users/${uid()}/collections/${cid}/photos`; }
+function snapshotsPath(cid){ return `users/${uid()}/collections/${cid}/snapshots`; }
+
+/* =========================================================================
+   NAVEGACIÓN
+   ========================================================================= */
+function navList(){
+  currentCollectionId = null;
+  if (unsubItems) { unsubItems(); unsubItems = null; }
+  document.getElementById('view-list').style.display = 'block';
+  document.getElementById('view-detail').style.display = 'none';
+  document.getElementById('crumbs').innerHTML = `<b>Mis colecciones</b>`;
+  renderCollectionsGrid();
+}
+
+function openCollection(cid){
+  currentCollectionId = cid;
+  currentCollectionMeta = collectionsCache.find(c => c.id === cid);
+  document.getElementById('view-list').style.display = 'none';
+  document.getElementById('view-detail').style.display = 'block';
+  document.getElementById('crumbs').innerHTML =
+    `<a onclick="navList()">Mis colecciones</a> &nbsp;›&nbsp; <b>${escapeHtml(currentCollectionMeta.name)}</b>`;
+  document.getElementById('detail-title').textContent =
+    `${currentCollectionMeta.icon || '📚'} ${currentCollectionMeta.name}`;
+  listenItems(cid);
+}
+window.navList = navList;
+window.openCollection = openCollection;
+
+/* =========================================================================
+   COLECCIONES: listado en vivo
+   ========================================================================= */
+function listenCollections(){
+  const q = query(collection(db, colPath()), orderBy('createdAt', 'asc'));
+  unsubCollections = onSnapshot(q, (snap) => {
+    collectionsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (!currentCollectionId) renderCollectionsGrid();
+    if (currentCollectionId) {
+      currentCollectionMeta = collectionsCache.find(c => c.id === currentCollectionId) || currentCollectionMeta;
+    }
+  });
+}
+
+function renderCollectionsGrid(){
+  const grid = document.getElementById('collections-grid');
+  const empty = document.getElementById('collections-empty');
+  if (collectionsCache.length === 0) {
+    grid.innerHTML = ''; empty.style.display = 'block'; return;
+  }
+  empty.style.display = 'none';
+  grid.innerHTML = collectionsCache.map(c => {
+    const total = c.stats?.total || 0;
+    const tengo = c.stats?.tengo || 0;
+    const pct = total ? Math.round((tengo/total)*100) : 0;
+    return `
+      <div class="col-card" onclick="openCollection('${c.id}')">
+        <div class="icon">${c.icon || '📚'}</div>
+        <h3>${escapeHtml(c.name)}</h3>
+        <div class="meta">${c.type === 'libre' ? `${total} elementos` : `${tengo}/${total} (${pct}%)`}</div>
+        ${c.type !== 'libre' ? `<div class="bar"><div style="width:${pct}%;"></div></div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+/* =========================================================================
+   NUEVA COLECCIÓN
+   ========================================================================= */
+document.getElementById('btn-new-collection').onclick = () => openModal('modal-new-collection');
+
+function selectNewCollectionMode(mode){
+  const name = document.getElementById('nc-name').value.trim();
+  const icon = document.getElementById('nc-icon').value.trim() || '📚';
+  if (!name) { showToast('Ponle un nombre a la colección primero'); return; }
+  if (mode === 'libre') {
+    closeModal('modal-new-collection');
+    libreFieldDraft = [
+      { key: 'nombre', label: 'Nombre / Denominación', type: 'text' },
+      { key: 'notas', label: 'Notas', type: 'textarea' }
+    ];
+    window._pendingCollection = { name, icon, type: 'libre' };
+    renderLibreFieldsEditor();
+    openModal('modal-libre-fields');
+  } else if (mode === 'import') {
+    closeModal('modal-new-collection');
+    window._pendingCollection = { name, icon, type: 'checklist' };
+    openModal('modal-import');
+  } else if (mode === 'ask') {
+    closeModal('modal-new-collection');
+    showToast('Cuéntame en el chat qué colección quieres y la preparo');
+  }
+}
+window.selectNewCollectionMode = selectNewCollectionMode;
+
+function renderLibreFieldsEditor(){
+  const list = document.getElementById('libre-fields-list');
+  list.innerHTML = libreFieldDraft.map((f, i) => `
+    <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center;">
+      <input value="${escapeHtml(f.label)}" onchange="libreFieldDraft[${i}].label=this.value" style="flex:1;">
+      <select onchange="libreFieldDraft[${i}].type=this.value" style="width:120px;">
+        <option value="text" ${f.type==='text'?'selected':''}>Texto</option>
+        <option value="number" ${f.type==='number'?'selected':''}>Número</option>
+        <option value="date" ${f.type==='date'?'selected':''}>Fecha</option>
+        <option value="textarea" ${f.type==='textarea'?'selected':''}>Texto largo</option>
+      </select>
+      <button class="btn small danger" onclick="removeLibreField(${i})">✕</button>
+    </div>`).join('');
+}
+function addLibreFieldRow(){
+  libreFieldDraft.push({ key: 'campo'+Date.now(), label: 'Nuevo campo', type: 'text' });
+  renderLibreFieldsEditor();
+}
+function removeLibreField(i){ libreFieldDraft.splice(i,1); renderLibreFieldsEditor(); }
+window.addLibreFieldRow = addLibreFieldRow;
+window.removeLibreField = removeLibreField;
+window.libreFieldDraft = libreFieldDraft;
+
+async function createLibreCollection(){
+  const pc = window._pendingCollection;
+  const fields = libreFieldDraft.map(f => ({...f, key: slugify(f.label)}));
+  const ref = await addDoc(collection(db, colPath()), {
+    name: pc.name, icon: pc.icon, type: 'libre', fields,
+    stats: { total: 0, tengo: 0 }, createdAt: serverTimestamp()
+  });
+  closeModal('modal-libre-fields');
+  showToast('Colección creada');
+  openCollection(ref.id);
+}
+window.createLibreCollection = createLibreCollection;
+window.selectNewCollectionMode = selectNewCollectionMode;
+
+/* =========================================================================
+   IMPORTAR EXCEL / CSV  (usa SheetJS, cargado bajo demanda)
+   ========================================================================= */
+let sheetJsLoaded = false;
+function ensureSheetJs(){
+  if (sheetJsLoaded) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    s.onload = () => { sheetJsLoaded = true; resolve(); };
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+function parseCsvText(text){
+  // Parser CSV ligero (sin dependencias externas): soporta comillas y comas dentro de campos.
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i], next = text[i+1];
+    if (inQuotes) {
+      if (c === '"' && next === '"') { field += '"'; i++; }
+      else if (c === '"') { inQuotes = false; }
+      else { field += c; }
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === ',') { row.push(field); field = ''; }
+      else if (c === '\r') { /* skip */ }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else field += c;
+    }
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  const headers = rows.shift().map(h => h.trim());
+  return rows.filter(r => r.length > 1 || r[0] !== '').map(r => {
+    const obj = {};
+    headers.forEach((h, idx) => obj[h] = (r[idx] ?? '').trim());
+    return obj;
+  });
+}
+
+document.getElementById('import-file').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  let rows;
+  if (file.name.toLowerCase().endsWith('.csv')) {
+    const text = await file.text();
+    rows = parseCsvText(text);
+  } else {
+    try {
+      await ensureSheetJs();
+    } catch (err) {
+      showToast('No se pudo cargar el lector de Excel (revisa tu conexión). Prueba a exportar el archivo como .csv.');
+      return;
+    }
+    const data = await file.arrayBuffer();
+    const wb = XLSX.read(data, { type: 'array' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+  }
+  if (!rows.length) { showToast('El archivo está vacío'); return; }
+  importParsedRows = rows;
+  importHeaders = Object.keys(rows[0]);
+  const selCodigo = document.getElementById('import-col-codigo');
+  const selNombre = document.getElementById('import-col-nombre');
+  selCodigo.innerHTML = importHeaders.map(h => `<option>${escapeHtml(h)}</option>`).join('');
+  selNombre.innerHTML = importHeaders.map(h => `<option>${escapeHtml(h)}</option>`).join('');
+  // Evita que ambas columnas queden seleccionadas por defecto en el mismo campo.
+  if (importHeaders.length > 1) selNombre.selectedIndex = 1;
+  document.getElementById('import-mapping').style.display = 'block';
+});
+
+async function confirmImport(){
+  const pc = window._pendingCollection;
+  const colCodigo = document.getElementById('import-col-codigo').value;
+  const colNombre = document.getElementById('import-col-nombre').value;
+  const fields = importHeaders
+    .filter(h => h !== colCodigo && h !== colNombre)
+    .map(h => ({ key: slugify(h), label: h, type: 'text', sourceHeader: h }));
+
+  const ref = await addDoc(collection(db, colPath()), {
+    name: pc.name, icon: pc.icon, type: 'checklist', fields,
+    stats: { total: importParsedRows.length, tengo: 0 }, createdAt: serverTimestamp()
+  });
+
+  let batch = writeBatch(db);
+  let count = 0;
+  for (const row of importParsedRows) {
+    const itemRef = doc(collection(db, itemsPath(ref.id)));
+    const extra = {};
+    fields.forEach(f => extra[f.key] = String(row[f.sourceHeader] ?? ''));
+    batch.set(itemRef, {
+      codigo: String(row[colCodigo] ?? ''),
+      nombre: String(row[colNombre] ?? ''),
+      campos: extra,
+      tengo: false, repetido: false, notas: '', tieneFoto: false,
+      createdAt: serverTimestamp()
+    });
+    count++;
+    if (count % 450 === 0) { await batch.commit(); batch = writeBatch(db); }
+  }
+  await batch.commit();
+
+  closeModal('modal-import');
+  showToast(`Importados ${importParsedRows.length} elementos`);
+  openCollection(ref.id);
+}
+window.confirmImport = confirmImport;
+
+/* =========================================================================
+   ITEMS: escucha en vivo de la colección abierta
+   ========================================================================= */
+function listenItems(cid){
+  if (unsubItems) unsubItems();
+  const q = query(collection(db, itemsPath(cid)), orderBy('createdAt', 'asc'));
+  unsubItems = onSnapshot(q, (snap) => {
+    currentItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderDetailStats();
+    renderDetailBody();
+  });
+}
+
+function renderDetailStats(){
+  const box = document.getElementById('detail-stats');
+  const total = currentItems.length;
+  const tengo = currentItems.filter(i => i.tengo).length;
+  if (currentCollectionMeta.type === 'libre') {
+    box.innerHTML = `<div class="stat"><b>${total}</b>elementos catalogados</div>`;
+  } else {
+    const pct = total ? Math.round((tengo/total)*100) : 0;
+    box.innerHTML = `
+      <div class="stat"><b>${total}</b>total</div>
+      <div class="stat"><b style="color:var(--green);">${tengo}</b>conseguidos</div>
+      <div class="stat"><b style="color:var(--red);">${total-tengo}</b>faltan</div>
+      <div class="stat"><b style="color:var(--blue);">${pct}%</b>progreso</div>`;
+  }
+}
+
+function renderDetailBody(){
+  const body = document.getElementById('detail-body');
+  const search = (document.getElementById('detail-search').value || '').toLowerCase();
+  let items = currentItems;
+  if (search) {
+    items = items.filter(i => JSON.stringify(i).toLowerCase().includes(search));
+  }
+
+  if (currentCollectionMeta.type === 'libre') {
+    body.innerHTML = `<div class="card-list">${items.map(renderLibreCard).join('') || '<p style="color:var(--muted);">Sin elementos todavía.</p>'}</div>`;
+  } else {
+    const fields = currentCollectionMeta.fields || [];
+    body.innerHTML = `
+      <div class="table-wrap"><table>
+        <thead><tr>
+          <th>Tengo</th><th>Código</th><th>Nombre</th>
+          ${fields.map(f => `<th>${escapeHtml(f.label)}</th>`).join('')}
+          <th>Repe</th><th>Foto</th><th></th>
+        </tr></thead>
+        <tbody>
+          ${items.map(i => `
+            <tr class="${i.tengo ? 'got' : ''}">
+              <td><input type="checkbox" ${i.tengo?'checked':''} onchange="toggleTengo('${i.id}', this.checked)"></td>
+              <td>${escapeHtml(i.codigo||'')}</td>
+              <td>${escapeHtml(i.nombre||'')}</td>
+              ${fields.map(f => `<td>${escapeHtml(i.campos?.[f.key] || '')}</td>`).join('')}
+              <td><input type="checkbox" ${i.repetido?'checked':''} onchange="toggleRepetido('${i.id}', this.checked)"></td>
+              <td>${i.tieneFoto ? `<button class="btn small" onclick="viewPhoto('${i.id}')">📷</button>` : ''}</td>
+              <td><button class="btn small" onclick="openEditItem('${i.id}')">✎</button></td>
+            </tr>`).join('') || `<tr><td colspan="99" style="color:var(--muted);">Sin elementos todavía.</td></tr>`}
+        </tbody>
+      </table></div>`;
+  }
+}
+document.getElementById('detail-search').addEventListener('input', renderDetailBody);
+
+function renderLibreCard(i){
+  const fields = currentCollectionMeta.fields || [];
+  return `
+    <div class="item-card">
+      ${i.tieneFoto ? `<img class="thumb" id="thumb-${i.id}" onclick="viewPhoto('${i.id}')">` : ''}
+      <h4>${escapeHtml(i.campos?.[fields[0]?.key] || i.nombre || 'Elemento')}</h4>
+      ${fields.slice(1).map(f => i.campos?.[f.key] ? `<div class="row"><b>${escapeHtml(f.label)}:</b> ${escapeHtml(i.campos[f.key])}</div>` : '').join('')}
+      <div class="actions">
+        <button class="btn small" onclick="openEditItem('${i.id}')">Editar</button>
+        <button class="btn small danger" onclick="deleteItem('${i.id}')">Borrar</button>
+      </div>
+    </div>`;
+}
+
+/* toggles */
+async function toggleTengo(itemId, val){
+  const before = currentItems.find(i => i.id === itemId)?.tengo || false;
+  await updateDoc(doc(db, itemsPath(currentCollectionId), itemId), { tengo: val });
+  if (before !== val) {
+    await updateDoc(doc(db, colPath(), currentCollectionId), { 'stats.tengo': increment(val ? 1 : -1) });
+  }
+}
+async function toggleRepetido(itemId, val){
+  await updateDoc(doc(db, itemsPath(currentCollectionId), itemId), { repetido: val });
+}
+window.toggleTengo = toggleTengo;
+window.toggleRepetido = toggleRepetido;
+
+/* =========================================================================
+   AÑADIR / EDITAR ELEMENTO
+   ========================================================================= */
+document.getElementById('btn-add-item').onclick = () => openEditItem(null);
+
+function openEditItem(itemId){
+  editingItemId = itemId;
+  const item = itemId ? currentItems.find(i => i.id === itemId) : null;
+  const fields = currentCollectionMeta.fields || [];
+  document.getElementById('item-modal-title').textContent = itemId ? 'Editar elemento' : 'Nuevo elemento';
+
+  let html = '';
+  if (currentCollectionMeta.type === 'checklist') {
+    html += `<div class="field"><label>Código</label><input id="f_codigo" value="${escapeHtml(item?.codigo||'')}"></div>`;
+    html += `<div class="field"><label>Nombre</label><input id="f_nombre" value="${escapeHtml(item?.nombre||'')}"></div>`;
+  }
+  fields.forEach(f => {
+    const val = item?.campos?.[f.key] || '';
+    if (f.type === 'textarea') {
+      html += `<div class="field"><label>${escapeHtml(f.label)}</label><textarea id="f_${f.key}" rows="2">${escapeHtml(val)}</textarea></div>`;
+    } else {
+      html += `<div class="field"><label>${escapeHtml(f.label)}</label><input id="f_${f.key}" type="${f.type==='number'?'number':f.type==='date'?'date':'text'}" value="${escapeHtml(val)}"></div>`;
+    }
+  });
+  if (currentCollectionMeta.type === 'checklist') {
+    html += `<div class="field"><label>Notas</label><textarea id="f_notas" rows="2">${escapeHtml(item?.notas||'')}</textarea></div>`;
+  }
+  document.getElementById('item-form-fields').innerHTML = html;
+  document.getElementById('item-foto-input').value = '';
+  document.getElementById('item-foto-input').dataset.resized = '';
+  const preview = document.getElementById('item-foto-preview');
+  preview.innerHTML = '';
+  preview.dataset.eliminar = '';
+  if (item?.tieneFoto) loadPhotoIntoPreview(itemId, preview);
+  openModal('modal-item');
+}
+window.openEditItem = openEditItem;
+
+document.getElementById('item-foto-input').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const dataUrl = await resizeImage(file, 900, 0.72);
+  e.target.dataset.resized = dataUrl;
+  document.getElementById('item-foto-preview').innerHTML =
+    `<img src="${dataUrl}" style="max-width:160px;max-height:160px;border-radius:8px;border:1px solid var(--border);">`;
+});
+
+async function saveItemFromModal(){
+  const fields = currentCollectionMeta.fields || [];
+  const campos = {};
+  fields.forEach(f => {
+    const el = document.getElementById('f_' + f.key);
+    if (el) campos[f.key] = el.value;
+  });
+
+  let data = { campos };
+  if (currentCollectionMeta.type === 'checklist') {
+    data.codigo = document.getElementById('f_codigo').value;
+    data.nombre = document.getElementById('f_nombre').value;
+    data.notas = document.getElementById('f_notas').value;
+  } else {
+    data.nombre = campos[fields[0]?.key] || '';
+  }
+
+  const fotoInput = document.getElementById('item-foto-input');
+  const fotoPreview = document.getElementById('item-foto-preview');
+
+  if (editingItemId) {
+    await updateDoc(doc(db, itemsPath(currentCollectionId), editingItemId), data);
+  } else {
+    data.tengo = currentCollectionMeta.type === 'libre' ? true : false;
+    data.repetido = false;
+    data.tieneFoto = false;
+    data.createdAt = serverTimestamp();
+    const ref = await addDoc(collection(db, itemsPath(currentCollectionId)), data);
+    editingItemId = ref.id;
+    await updateDoc(doc(db, colPath(), currentCollectionId), {
+      'stats.total': increment(1),
+      ...(data.tengo ? { 'stats.tengo': increment(1) } : {})
+    });
+  }
+
+  if (fotoInput.dataset.resized) {
+    await setDoc(doc(db, photosPath(currentCollectionId), editingItemId), { data: fotoInput.dataset.resized, updatedAt: serverTimestamp() });
+    await updateDoc(doc(db, itemsPath(currentCollectionId), editingItemId), { tieneFoto: true });
+  } else if (fotoPreview.dataset.eliminar === '1') {
+    await deleteDoc(doc(db, photosPath(currentCollectionId), editingItemId));
+    await updateDoc(doc(db, itemsPath(currentCollectionId), editingItemId), { tieneFoto: false });
+  }
+
+  closeModal('modal-item');
+  showToast('Guardado');
+}
+window.saveItemFromModal = saveItemFromModal;
+
+async function deleteItem(itemId){
+  if (!confirm('¿Eliminar este elemento?')) return;
+  const item = currentItems.find(i => i.id === itemId);
+  await deleteDoc(doc(db, itemsPath(currentCollectionId), itemId));
+  if (item?.tieneFoto) await deleteDoc(doc(db, photosPath(currentCollectionId), itemId)).catch(()=>{});
+  const dec = { 'stats.total': increment(-1) };
+  if (item?.tengo) dec['stats.tengo'] = increment(-1);
+  await updateDoc(doc(db, colPath(), currentCollectionId), dec);
+  showToast('Elemento eliminado');
+}
+window.deleteItem = deleteItem;
+
+/* =========================================================================
+   FOTOS
+   ========================================================================= */
+function resizeImage(file, maxDim, quality){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > h && w > maxDim) { h = Math.round(h*maxDim/w); w = maxDim; }
+        else if (h > maxDim) { w = Math.round(w*maxDim/h); h = maxDim; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = ev.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function loadPhotoIntoPreview(itemId, previewEl){
+  previewEl.innerHTML = '<span style="color:var(--muted);font-size:.78rem;">Cargando foto...</span>';
+  const snap = await getDoc(doc(db, photosPath(currentCollectionId), itemId));
+  if (snap.exists()) {
+    previewEl.innerHTML = `<img src="${snap.data().data}" style="max-width:160px;max-height:160px;border-radius:8px;border:1px solid var(--border);">
+      <button type="button" class="btn small danger" onclick="this.parentElement.dataset.eliminar='1';this.parentElement.innerHTML='<span style=color:var(--muted)>Se eliminará al guardar</span>';">Quitar foto</button>`;
+  } else {
+    previewEl.innerHTML = '';
+  }
+}
+
+async function viewPhoto(itemId){
+  const snap = await getDoc(doc(db, photosPath(currentCollectionId), itemId));
+  if (!snap.exists()) { showToast('Sin foto'); return; }
+  const w = window.open('', '_blank');
+  w.document.write(`<title>Foto</title><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="${snap.data().data}" style="max-width:100%;max-height:100vh;"></body>`);
+}
+window.viewPhoto = viewPhoto;
+
+/* pre-cargar miniaturas visibles en tarjetas libres */
+const thumbObserver = new MutationObserver(() => {
+  document.querySelectorAll('img.thumb[id^="thumb-"]').forEach(async (img) => {
+    if (img.dataset.loaded) return;
+    img.dataset.loaded = '1';
+    const itemId = img.id.replace('thumb-', '');
+    const snap = await getDoc(doc(db, photosPath(currentCollectionId), itemId)).catch(()=>null);
+    if (snap?.exists()) img.src = snap.data().data;
+  });
+});
+thumbObserver.observe(document.getElementById('detail-body'), { childList: true, subtree: true });
+
+/* =========================================================================
+   SNAPSHOT / INFORME
+   ========================================================================= */
+document.getElementById('btn-snapshot').onclick = async () => {
+  const total = currentItems.length;
+  const tengo = currentItems.filter(i => i.tengo).length;
+  await addDoc(collection(db, snapshotsPath(currentCollectionId)), {
+    total, tengo, timestamp: serverTimestamp()
+  });
+  showToast('Snapshot guardado');
+  openPrintReport();
+};
+
+function openPrintReport(){
+  const total = currentItems.length;
+  const tengo = currentItems.filter(i => i.tengo).length;
+  const fecha = new Date().toLocaleDateString('es-ES', { day:'2-digit', month:'long', year:'numeric' });
+  const conseguidos = currentItems.filter(i => i.tengo);
+  const faltan = currentItems.filter(i => !i.tengo);
+  document.getElementById('print-area').innerHTML = `
+    <h1>${escapeHtml(currentCollectionMeta.name)}</h1>
+    <p>Informe generado el ${fecha} — ${tengo}/${total} conseguidos</p>
+    <h3>✅ Conseguidos (${conseguidos.length})</h3>
+    ${conseguidos.map(i => `<div class="pitem">${escapeHtml(i.codigo||'')} — ${escapeHtml(i.nombre||'')}</div>`).join('') || '<p>Ninguno todavía</p>'}
+    <h3>❌ Faltan (${faltan.length})</h3>
+    ${faltan.map(i => `<div class="pitem">${escapeHtml(i.codigo||'')} — ${escapeHtml(i.nombre||'')}</div>`).join('') || '<p>¡Completa!</p>'}
+  `;
+  setTimeout(() => window.print(), 200);
+}
+
+/* =========================================================================
+   HISTORIAL
+   ========================================================================= */
+document.getElementById('btn-history').onclick = async () => {
+  const q = query(collection(db, snapshotsPath(currentCollectionId)), orderBy('timestamp', 'asc'));
+  const snap = await getDocs(q);
+  const rows = snap.docs.map(d => d.data());
+  const list = document.getElementById('history-list');
+  if (!rows.length) {
+    list.innerHTML = '<p style="color:var(--muted);">Aún no has guardado ningún snapshot de esta colección.</p>';
+  } else {
+    const max = Math.max(...rows.map(r => r.total || 1));
+    list.innerHTML = rows.map(r => {
+      const fecha = r.timestamp?.toDate ? r.timestamp.toDate().toLocaleDateString('es-ES') : '—';
+      const pct = r.total ? Math.round((r.tengo/r.total)*100) : 0;
+      const width = Math.round((r.tengo/max)*100);
+      return `<div class="hist-row"><span style="width:90px;">${fecha}</span><div class="bar-bg"><div style="width:${width}%;"></div></div><span>${r.tengo}/${r.total} (${pct}%)</span></div>`;
+    }).join('');
+  }
+  openModal('modal-history');
+};
+
+/* =========================================================================
+   AJUSTES DE COLECCIÓN
+   ========================================================================= */
+document.getElementById('btn-collection-settings').onclick = () => {
+  document.getElementById('set-name').value = currentCollectionMeta.name;
+  document.getElementById('set-icon').value = currentCollectionMeta.icon || '';
+  openModal('modal-settings');
+};
+async function saveCollectionSettings(){
+  await updateDoc(doc(db, colPath(), currentCollectionId), {
+    name: document.getElementById('set-name').value,
+    icon: document.getElementById('set-icon').value
+  });
+  closeModal('modal-settings');
+  showToast('Colección actualizada');
+}
+async function deleteCurrentCollection(){
+  if (!confirm('Esto borrará la colección y TODOS sus elementos. ¿Seguro?')) return;
+  const itemsSnap = await getDocs(collection(db, itemsPath(currentCollectionId)));
+  const batch = writeBatch(db);
+  itemsSnap.docs.forEach(d => batch.delete(d.ref));
+  await batch.commit();
+  await deleteDoc(doc(db, colPath(), currentCollectionId));
+  closeModal('modal-settings');
+  navList();
+  showToast('Colección eliminada');
+}
+window.saveCollectionSettings = saveCollectionSettings;
+window.deleteCurrentCollection = deleteCurrentCollection;
+
+/* =========================================================================
+   UTILIDADES
+   ========================================================================= */
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+window.openModal = openModal;
+window.closeModal = closeModal;
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => t.style.display = 'none', 2600);
+}
+
+function escapeHtml(str){
+  return String(str ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function slugify(str){
+  return String(str).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'') || ('campo'+Date.now());
+}
+</script>
+</body>
+</html>
