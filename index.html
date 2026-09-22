@@ -69,6 +69,12 @@
   .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0;}
   .toolbar .stat{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:.8rem;}
   .toolbar .stat b{font-size:1.05rem;color:var(--brass);display:block;}
+  .filter-select{max-width:180px;}
+  .filter-select.active{border-color:var(--brass);color:var(--brass);}
+  th.sortable{cursor:pointer;user-select:none;white-space:nowrap;}
+  th.sortable:hover{color:var(--brass);}
+  th.sortable .arrow{opacity:.4;margin-left:3px;}
+  th.sortable.sorted .arrow{opacity:1;color:var(--brass);}
   .searchbar{flex:1;min-width:160px;}
 
   /* ---------- Tabla checklist ---------- */
@@ -113,8 +119,25 @@
   @media print{
     body *{visibility:hidden;}
     #print-area, #print-area *{visibility:visible;}
-    #print-area{display:block;position:absolute;top:0;left:0;width:100%;padding:20px;color:#000;background:#fff;}
-    #print-area .pitem{padding:4px 0;border-bottom:1px solid #ccc;font-size:12px;}
+    #print-area{display:block;position:absolute;top:0;left:0;width:100%;padding:0;color:#1a1a1a;background:#fff;font-family:-apple-system,Arial,sans-serif;}
+    #print-area h1{font-size:20px;margin:0 0 2px;color:#000;}
+    #print-area .psub{font-size:11px;color:#666;margin:0 0 10px;}
+    #print-area .psummary{display:flex;gap:18px;margin:10px 0;}
+    #print-area .psummary div{text-align:center;}
+    #print-area .psummary b{display:block;font-size:18px;}
+    #print-area .psummary span{font-size:9px;color:#666;text-transform:uppercase;letter-spacing:.03em;}
+    #print-area .pbar{height:6px;background:#eee;border-radius:3px;overflow:hidden;margin-bottom:16px;}
+    #print-area .pbar > div{height:100%;background:#c9a227;}
+    #print-area .preport-header{border-bottom:2px solid #222;padding-bottom:10px;margin-bottom:14px;page-break-after:avoid;}
+    #print-area h2{font-size:14px;margin:18px 0 6px;padding-top:6px;border-top:1px solid #ddd;page-break-after:avoid;}
+    #print-area h2 .count{font-weight:normal;color:#888;font-size:11px;}
+    #print-area h3{font-size:11px;margin:10px 0 4px;color:#555;text-transform:uppercase;letter-spacing:.03em;page-break-after:avoid;}
+    #print-area .pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;column-gap:14px;}
+    #print-area .pitem{padding:2px 0;border-bottom:1px dotted #ccc;font-size:10.5px;break-inside:avoid;}
+    #print-area .pitem.falta{color:#8a2f22;}
+    #print-area .pitem.ok{color:#2f6b3e;}
+    #print-area .empty{font-size:11px;color:#888;font-style:italic;}
+    @page{margin:14mm;}
   }
 
   @media (max-width:680px){
@@ -183,6 +206,7 @@
         <button class="btn" id="btn-history">📈 Ver historial</button>
         <button class="btn" id="btn-collection-settings">⚙️</button>
       </div>
+      <div class="toolbar" id="detail-filters"></div>
       <div id="detail-body"></div>
     </div>
   </div>
@@ -598,13 +622,19 @@ window.confirmImport = confirmImport;
    ========================================================================= */
 function listenItems(cid){
   if (unsubItems) unsubItems();
+  sortState = { field: null, dir: 'asc' };
+  filterState = {};
   const q = query(collection(db, itemsPath(cid)), orderBy('createdAt', 'asc'));
   unsubItems = onSnapshot(q, (snap) => {
     currentItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderDetailStats();
+    renderFiltersBar();
     renderDetailBody();
   });
 }
+
+let sortState = { field: null, dir: 'asc' };
+let filterState = {}; // { fieldKey: valorSeleccionado }
 
 function renderDetailStats(){
   const box = document.getElementById('detail-stats');
@@ -622,24 +652,99 @@ function renderDetailStats(){
   }
 }
 
+function getFieldValue(item, fieldKey){
+  if (fieldKey === 'tengo') return item.tengo ? 1 : 0;
+  if (fieldKey === 'repetido') return item.repetido ? 1 : 0;
+  if (fieldKey === 'codigo') return item.codigo || '';
+  if (fieldKey === 'nombre') return item.nombre || '';
+  return item.campos?.[fieldKey] ?? '';
+}
+
+function renderFiltersBar(){
+  const box = document.getElementById('detail-filters');
+  if (currentCollectionMeta.type !== 'checklist') { box.innerHTML = ''; return; }
+  const fields = currentCollectionMeta.fields || [];
+  // Solo ofrecemos filtro en campos con un numero razonable de valores distintos (<=60)
+  let html = '';
+  fields.forEach(f => {
+    const values = [...new Set(currentItems.map(i => i.campos?.[f.key]).filter(v => v !== undefined && v !== ''))].sort();
+    if (values.length > 1 && values.length <= 60) {
+      const active = filterState[f.key] ? 'active' : '';
+      html += `<select class="filter-select ${active}" onchange="setFilter('${f.key}', this.value)">
+        <option value="">${escapeHtml(f.label)}: todos</option>
+        ${values.map(v => `<option value="${escapeHtml(v)}" ${filterState[f.key]===v?'selected':''}>${escapeHtml(v)}</option>`).join('')}
+      </select>`;
+    }
+  });
+  const estadoActive = filterState.__estado ? 'active' : '';
+  html += `<select class="filter-select ${estadoActive}" onchange="setFilter('__estado', this.value)">
+    <option value="">Estado: todos</option>
+    <option value="tengo" ${filterState.__estado==='tengo'?'selected':''}>✅ Tengo</option>
+    <option value="falta" ${filterState.__estado==='falta'?'selected':''}>❌ Me falta</option>
+    <option value="repetido" ${filterState.__estado==='repetido'?'selected':''}>♻️ Repetido</option>
+  </select>`;
+  if (Object.keys(filterState).length) {
+    html += `<button class="btn small" onclick="clearFilters()">✕ Quitar filtros</button>`;
+  }
+  box.innerHTML = html;
+}
+function setFilter(key, value){
+  if (value) filterState[key] = value; else delete filterState[key];
+  renderDetailBody(); renderFiltersBar();
+}
+function clearFilters(){ filterState = {}; renderDetailBody(); renderFiltersBar(); }
+function setSort(field){
+  if (sortState.field === field) sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+  else { sortState.field = field; sortState.dir = 'asc'; }
+  renderDetailBody();
+}
+window.setFilter = setFilter;
+window.clearFilters = clearFilters;
+window.setSort = setSort;
+
 function renderDetailBody(){
   const body = document.getElementById('detail-body');
   const search = (document.getElementById('detail-search').value || '').toLowerCase();
   let items = currentItems;
-  if (search) {
-    items = items.filter(i => JSON.stringify(i).toLowerCase().includes(search));
+
+  if (search) items = items.filter(i => JSON.stringify(i).toLowerCase().includes(search));
+
+  Object.keys(filterState).forEach(key => {
+    const val = filterState[key];
+    if (key === '__estado') {
+      if (val === 'tengo') items = items.filter(i => i.tengo);
+      else if (val === 'falta') items = items.filter(i => !i.tengo);
+      else if (val === 'repetido') items = items.filter(i => i.repetido);
+    } else {
+      items = items.filter(i => String(i.campos?.[key] ?? '') === val);
+    }
+  });
+
+  if (sortState.field) {
+    items = [...items].sort((a, b) => {
+      let va = getFieldValue(a, sortState.field), vb = getFieldValue(b, sortState.field);
+      const na = parseFloat(va), nb = parseFloat(vb);
+      let cmp;
+      if (!isNaN(na) && !isNaN(nb) && String(na) === String(va).trim() && String(nb) === String(vb).trim()) cmp = na - nb;
+      else cmp = String(va).localeCompare(String(vb), 'es', { numeric: true });
+      return sortState.dir === 'asc' ? cmp : -cmp;
+    });
   }
 
   if (currentCollectionMeta.type === 'libre') {
     body.innerHTML = `<div class="card-list">${items.map(renderLibreCard).join('') || '<p style="color:var(--muted);">Sin elementos todavía.</p>'}</div>`;
   } else {
     const fields = currentCollectionMeta.fields || [];
+    const arrow = (key) => sortState.field === key ? (sortState.dir === 'asc' ? '▲' : '▼') : '▲';
+    const th = (key, label) => `<th class="sortable ${sortState.field===key?'sorted':''}" onclick="setSort('${key}')">${escapeHtml(label)} <span class="arrow">${arrow(key)}</span></th>`;
     body.innerHTML = `
       <div class="table-wrap"><table>
         <thead><tr>
-          <th>Tengo</th><th>Código</th><th>Nombre</th>
-          ${fields.map(f => `<th>${escapeHtml(f.label)}</th>`).join('')}
-          <th>Repe</th><th>Foto</th><th></th>
+          <th class="sortable ${sortState.field==='tengo'?'sorted':''}" onclick="setSort('tengo')">Tengo <span class="arrow">${arrow('tengo')}</span></th>
+          ${th('codigo','Código')}${th('nombre','Nombre')}
+          ${fields.map(f => th(f.key, f.label)).join('')}
+          <th class="sortable ${sortState.field==='repetido'?'sorted':''}" onclick="setSort('repetido')">Repe <span class="arrow">${arrow('repetido')}</span></th>
+          <th>Foto</th><th></th>
         </tr></thead>
         <tbody>
           ${items.map(i => `
@@ -651,9 +756,10 @@ function renderDetailBody(){
               <td><input type="checkbox" ${i.repetido?'checked':''} onchange="toggleRepetido('${i.id}', this.checked)"></td>
               <td>${i.tieneFoto ? `<button class="btn small" onclick="viewPhoto('${i.id}')">📷</button>` : ''}</td>
               <td><button class="btn small" onclick="openEditItem('${i.id}')">✎</button></td>
-            </tr>`).join('') || `<tr><td colspan="99" style="color:var(--muted);">Sin elementos todavía.</td></tr>`}
+            </tr>`).join('') || `<tr><td colspan="99" style="color:var(--muted);">Sin resultados con estos filtros.</td></tr>`}
         </tbody>
-      </table></div>`;
+      </table></div>
+      <p style="font-size:.75rem;color:var(--muted);margin-top:8px;">Mostrando ${items.length} de ${currentItems.length} elementos.</p>`;
   }
 }
 document.getElementById('detail-search').addEventListener('input', renderDetailBody);
@@ -865,16 +971,49 @@ document.getElementById('btn-snapshot').onclick = async () => {
 function openPrintReport(){
   const total = currentItems.length;
   const tengo = currentItems.filter(i => i.tengo).length;
+  const pct = total ? Math.round((tengo/total)*100) : 0;
   const fecha = new Date().toLocaleDateString('es-ES', { day:'2-digit', month:'long', year:'numeric' });
+  const fields = currentCollectionMeta.fields || [];
+  // Agrupamos por el primer campo extra si existe (ej. País), si no por Código
+  const groupKey = fields[0]?.key || null;
+  const groupLabel = fields[0]?.label || null;
+
+  function groupAndRender(items, titulo, claseEstado){
+    if (!items.length) return `<p class="empty">${titulo}: ninguno.</p>`;
+    let html = `<h2>${titulo} <span class="count">(${items.length})</span></h2>`;
+    if (groupKey) {
+      const groups = {};
+      items.forEach(i => {
+        const g = i.campos?.[groupKey] || '—';
+        (groups[g] = groups[g] || []).push(i);
+      });
+      Object.keys(groups).sort().forEach(g => {
+        html += `<h3>${escapeHtml(groupLabel)}: ${escapeHtml(g)}</h3>`;
+        html += `<div class="pgrid">${groups[g].map(i => `<div class="pitem ${claseEstado}">${escapeHtml(i.codigo||'')} — ${escapeHtml(i.nombre||'')}</div>`).join('')}</div>`;
+      });
+    } else {
+      html += `<div class="pgrid">${items.map(i => `<div class="pitem ${claseEstado}">${escapeHtml(i.codigo||'')} — ${escapeHtml(i.nombre||'')}</div>`).join('')}</div>`;
+    }
+    return html;
+  }
+
   const conseguidos = currentItems.filter(i => i.tengo);
   const faltan = currentItems.filter(i => !i.tengo);
+
   document.getElementById('print-area').innerHTML = `
-    <h1>${escapeHtml(currentCollectionMeta.name)}</h1>
-    <p>Informe generado el ${fecha} — ${tengo}/${total} conseguidos</p>
-    <h3>✅ Conseguidos (${conseguidos.length})</h3>
-    ${conseguidos.map(i => `<div class="pitem">${escapeHtml(i.codigo||'')} — ${escapeHtml(i.nombre||'')}</div>`).join('') || '<p>Ninguno todavía</p>'}
-    <h3>❌ Faltan (${faltan.length})</h3>
-    ${faltan.map(i => `<div class="pitem">${escapeHtml(i.codigo||'')} — ${escapeHtml(i.nombre||'')}</div>`).join('') || '<p>¡Completa!</p>'}
+    <div class="preport-header">
+      <h1>${escapeHtml(currentCollectionMeta.icon || '')} ${escapeHtml(currentCollectionMeta.name)}</h1>
+      <p class="psub">Informe generado el ${fecha}</p>
+      <div class="psummary">
+        <div><b>${total}</b><span>Total</span></div>
+        <div><b>${tengo}</b><span>Conseguidos</span></div>
+        <div><b>${total-tengo}</b><span>Faltan</span></div>
+        <div><b>${pct}%</b><span>Progreso</span></div>
+      </div>
+      <div class="pbar"><div style="width:${pct}%;"></div></div>
+    </div>
+    ${groupAndRender(faltan, '❌ Elementos que faltan', 'falta')}
+    ${groupAndRender(conseguidos, '✅ Elementos conseguidos', 'ok')}
   `;
   setTimeout(() => window.print(), 200);
 }
