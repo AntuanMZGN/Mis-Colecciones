@@ -120,24 +120,41 @@
     body *{visibility:hidden;}
     #print-area, #print-area *{visibility:visible;}
     #print-area{display:block;position:absolute;top:0;left:0;width:100%;padding:0;color:#1a1a1a;background:#fff;font-family:-apple-system,Arial,sans-serif;}
-    #print-area h1{font-size:20px;margin:0 0 2px;color:#000;}
-    #print-area .psub{font-size:11px;color:#666;margin:0 0 10px;}
-    #print-area .psummary{display:flex;gap:18px;margin:10px 0;}
+    @page{margin:10mm;size:landscape;}
+
+    /* Cabecera comun */
+    #print-area h1{font-size:18px;margin:0 0 2px;color:#000;}
+    #print-area .psub, #print-area .cl-header p{font-size:10px;color:#666;margin:0 0 8px;}
+    #print-area .psummary{display:flex;gap:16px;margin:8px 0;}
     #print-area .psummary div{text-align:center;}
-    #print-area .psummary b{display:block;font-size:18px;}
-    #print-area .psummary span{font-size:9px;color:#666;text-transform:uppercase;letter-spacing:.03em;}
-    #print-area .pbar{height:6px;background:#eee;border-radius:3px;overflow:hidden;margin-bottom:16px;}
+    #print-area .psummary b{display:block;font-size:16px;}
+    #print-area .psummary span{font-size:8px;color:#666;text-transform:uppercase;letter-spacing:.03em;}
+    #print-area .pbar{height:5px;background:#eee;border-radius:3px;overflow:hidden;margin-bottom:10px;}
     #print-area .pbar > div{height:100%;background:#c9a227;}
-    #print-area .preport-header{border-bottom:2px solid #222;padding-bottom:10px;margin-bottom:14px;page-break-after:avoid;}
-    #print-area h2{font-size:14px;margin:18px 0 6px;padding-top:6px;border-top:1px solid #ddd;page-break-after:avoid;}
-    #print-area h2 .count{font-weight:normal;color:#888;font-size:11px;}
-    #print-area h3{font-size:11px;margin:10px 0 4px;color:#555;text-transform:uppercase;letter-spacing:.03em;page-break-after:avoid;}
-    #print-area .pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;column-gap:14px;}
-    #print-area .pitem{padding:2px 0;border-bottom:1px dotted #ccc;font-size:10.5px;break-inside:avoid;}
-    #print-area .pitem.falta{color:#8a2f22;}
-    #print-area .pitem.ok{color:#2f6b3e;}
-    #print-area .empty{font-size:11px;color:#888;font-style:italic;}
-    @page{margin:14mm;}
+    #print-area .preport-header{border-bottom:2px solid #222;padding-bottom:8px;margin-bottom:10px;page-break-after:avoid;}
+
+    /* Informe agrupado */
+    #print-area .pgroups{column-count:3;column-gap:10px;}
+    #print-area .pgroup{break-inside:avoid;margin-bottom:10px;border:1px solid #ddd;border-radius:4px;overflow:hidden;}
+    #print-area .pgroup-title{background:#2b2320;color:#fff;font-size:10.5px;font-weight:bold;padding:3px 6px;}
+    #print-area table.ptable{width:100%;border-collapse:collapse;font-size:9px;}
+    #print-area table.ptable th{background:#eee2c6;text-align:left;padding:2px 5px;font-size:8px;text-transform:uppercase;color:#555;}
+    #print-area table.ptable td{padding:2px 5px;border-top:1px solid #eee;}
+    #print-area table.ptable td.chk{text-align:center;width:24px;}
+    #print-area table.ptable td.pcode{color:#888;font-size:8px;}
+    #print-area table.ptable tr.rowok{background:#eaf5ea;}
+    #print-area table.ptable tr.rowfalta{background:#fdf1ef;}
+
+    /* Checklist compacta */
+    #print-area .cl-header{border-bottom:2px solid #222;padding-bottom:6px;margin-bottom:8px;}
+    #print-area .cl-grid{column-count:4;column-gap:8px;}
+    #print-area .cl-group{break-inside:avoid;margin-bottom:8px;border:1px solid #333;border-radius:3px;overflow:hidden;}
+    #print-area .cl-group-title{background:#7a1f2b;color:#fff;font-size:9px;font-weight:bold;padding:2px 5px;}
+    #print-area .cl-cell{display:flex;align-items:center;gap:4px;padding:1.5px 4px;border-bottom:1px solid #eee;font-size:8px;break-inside:avoid;}
+    #print-area .cl-cell.ok{background:#eaf5ea;}
+    #print-area .cl-box{width:9px;height:9px;border:1px solid #888;flex:none;display:inline-flex;align-items:center;justify-content:center;font-size:7px;color:#2f6b3e;}
+    #print-area .cl-code{color:#888;flex:none;min-width:34px;}
+    #print-area .cl-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   }
 
   @media (max-width:680px){
@@ -282,6 +299,24 @@
 </div>
 
 <!-- Historial -->
+<!-- Elegir formato de informe -->
+<div class="backdrop" id="modal-report-format">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-report-format')">✕</button>
+    <h2>¿Qué tipo de informe quieres?</h2>
+    <div class="option-row">
+      <div class="option-btn" onclick="closeModal('modal-report-format');generateReport('agrupado')">
+        <b>📊 Informe agrupado</b>
+        <span>Organizado por grupos (ej. país + año), ordenado por valor, con casillas de Tengo/Repe y colores. Ideal para revisar qué te falta.</span>
+      </div>
+      <div class="option-btn" onclick="closeModal('modal-report-format');generateReport('checklist')">
+        <b>📋 Checklist compacta</b>
+        <span>Cuadrícula densa tipo álbum de cromos, con recuadros pequeños numerados, lista para imprimir y marcar a mano.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="backdrop" id="modal-history">
   <div class="modal">
     <button class="modal-close" onclick="closeModal('modal-history')">✕</button>
@@ -965,40 +1000,84 @@ document.getElementById('btn-snapshot').onclick = async () => {
     total, tengo, timestamp: serverTimestamp()
   });
   showToast('Snapshot guardado');
-  openPrintReport();
+  openModal('modal-report-format');
 };
 
-function openPrintReport(){
+// Intenta encontrar los campos "país", "año", "ceca" y un campo de valor/denominación
+// entre los campos configurados de la colección, por nombre de clave o etiqueta.
+function findFieldByHints(fields, hints){
+  return fields.find(f => hints.some(h => f.key.includes(h) || f.label.toLowerCase().includes(h)));
+}
+function parseValorNumerico(str){
+  if (!str) return 0;
+  const s = String(str).toLowerCase().replace(',', '.');
+  const m = s.match(/([\d.]+)/);
+  if (!m) return 0;
+  const n = parseFloat(m[1]);
+  return s.includes('c') && !s.includes('€') ? n / 100 : n; // "50 c" -> 0.50 ; "2 €" -> 2
+}
+
+function generateReport(modo){
+  const fields = currentCollectionMeta.fields || [];
+  const paisField = findFieldByHints(fields, ['pais', 'país']);
+  const anoField = findFieldByHints(fields, ['ano', 'año']);
+  const valorField = findFieldByHints(fields, ['denominacion', 'denominación', 'valor', 'motivo']);
+  const cecaField = findFieldByHints(fields, ['ceca']);
+
+  if (modo === 'checklist') renderChecklistReport(paisField, anoField, valorField, cecaField);
+  else renderGroupedReport(paisField, anoField, valorField, cecaField);
+
+  setTimeout(() => window.print(), 250);
+}
+window.generateReport = generateReport;
+
+function itemGroupKey(i, paisField, anoField){
+  const p = paisField ? (i.campos?.[paisField.key] || '—') : null;
+  const a = anoField ? (i.campos?.[anoField.key] || '—') : null;
+  if (p && a) return `${p}|||${a}`;
+  if (p) return p;
+  return '__all__';
+}
+
+function renderGroupedReport(paisField, anoField, valorField, cecaField){
   const total = currentItems.length;
   const tengo = currentItems.filter(i => i.tengo).length;
   const pct = total ? Math.round((tengo/total)*100) : 0;
   const fecha = new Date().toLocaleDateString('es-ES', { day:'2-digit', month:'long', year:'numeric' });
-  const fields = currentCollectionMeta.fields || [];
-  // Agrupamos por el primer campo extra si existe (ej. País), si no por Código
-  const groupKey = fields[0]?.key || null;
-  const groupLabel = fields[0]?.label || null;
 
-  function groupAndRender(items, titulo, claseEstado){
-    if (!items.length) return `<p class="empty">${titulo}: ninguno.</p>`;
-    let html = `<h2>${titulo} <span class="count">(${items.length})</span></h2>`;
-    if (groupKey) {
-      const groups = {};
-      items.forEach(i => {
-        const g = i.campos?.[groupKey] || '—';
-        (groups[g] = groups[g] || []).push(i);
-      });
-      Object.keys(groups).sort().forEach(g => {
-        html += `<h3>${escapeHtml(groupLabel)}: ${escapeHtml(g)}</h3>`;
-        html += `<div class="pgrid">${groups[g].map(i => `<div class="pitem ${claseEstado}">${escapeHtml(i.codigo||'')} — ${escapeHtml(i.nombre||'')}</div>`).join('')}</div>`;
-      });
-    } else {
-      html += `<div class="pgrid">${items.map(i => `<div class="pitem ${claseEstado}">${escapeHtml(i.codigo||'')} — ${escapeHtml(i.nombre||'')}</div>`).join('')}</div>`;
+  let items = [...currentItems];
+  items.sort((a, b) => {
+    const ka = itemGroupKey(a, paisField, anoField), kb = itemGroupKey(b, paisField, anoField);
+    if (ka !== kb) return ka.localeCompare(kb, 'es');
+    if (valorField) return parseValorNumerico(a.campos?.[valorField.key]) - parseValorNumerico(b.campos?.[valorField.key]);
+    return 0;
+  });
+
+  const groups = [];
+  let lastKey = null, currentGroup = null;
+  items.forEach(i => {
+    const key = itemGroupKey(i, paisField, anoField);
+    if (key !== lastKey) {
+      const p = paisField ? (i.campos?.[paisField.key] || '') : '';
+      const a = anoField ? (i.campos?.[anoField.key] || '') : '';
+      currentGroup = { titulo: [p, a].filter(Boolean).join(' — ') || 'Todos', items: [] };
+      groups.push(currentGroup);
+      lastKey = key;
     }
-    return html;
-  }
+    currentGroup.items.push(i);
+  });
 
-  const conseguidos = currentItems.filter(i => i.tengo);
-  const faltan = currentItems.filter(i => !i.tengo);
+  const rowsHtml = (grp) => grp.items.map(i => {
+    const ceca = cecaField ? (i.campos?.[cecaField.key] || '') : '';
+    const valor = valorField ? (i.campos?.[valorField.key] || i.nombre || '') : (i.nombre || '');
+    return `<tr class="${i.tengo ? 'rowok' : 'rowfalta'}">
+      <td class="chk">${i.tengo ? '✅' : '⬜'}</td>
+      <td class="chk">${i.repetido ? '♻️' : ''}</td>
+      <td>${escapeHtml(valor)}</td>
+      ${cecaField ? `<td>${escapeHtml(ceca)}</td>` : ''}
+      <td class="pcode">${escapeHtml(i.codigo || '')}</td>
+    </tr>`;
+  }).join('');
 
   document.getElementById('print-area').innerHTML = `
     <div class="preport-header">
@@ -1012,10 +1091,67 @@ function openPrintReport(){
       </div>
       <div class="pbar"><div style="width:${pct}%;"></div></div>
     </div>
-    ${groupAndRender(faltan, '❌ Elementos que faltan', 'falta')}
-    ${groupAndRender(conseguidos, '✅ Elementos conseguidos', 'ok')}
+    <div class="pgroups">
+      ${groups.map(g => `
+        <div class="pgroup">
+          <div class="pgroup-title">${escapeHtml(g.titulo)}</div>
+          <table class="ptable">
+            <thead><tr><th>Tengo</th><th>Repe</th><th>Valor</th>${cecaField?'<th>Ceca</th>':''}<th>Código</th></tr></thead>
+            <tbody>${rowsHtml(g)}</tbody>
+          </table>
+        </div>`).join('')}
+    </div>
   `;
-  setTimeout(() => window.print(), 200);
+}
+
+function renderChecklistReport(paisField, anoField, valorField, cecaField){
+  const total = currentItems.length;
+  const tengo = currentItems.filter(i => i.tengo).length;
+  const fecha = new Date().toLocaleDateString('es-ES', { day:'2-digit', month:'long', year:'numeric' });
+
+  let items = [...currentItems];
+  items.sort((a, b) => {
+    const ka = itemGroupKey(a, paisField, anoField), kb = itemGroupKey(b, paisField, anoField);
+    if (ka !== kb) return ka.localeCompare(kb, 'es');
+    if (valorField) return parseValorNumerico(a.campos?.[valorField.key]) - parseValorNumerico(b.campos?.[valorField.key]);
+    return 0;
+  });
+
+  const groups = [];
+  let lastKey = null, currentGroup = null;
+  items.forEach(i => {
+    const key = itemGroupKey(i, paisField, anoField);
+    if (key !== lastKey) {
+      const p = paisField ? (i.campos?.[paisField.key] || '') : '';
+      const a = anoField ? (i.campos?.[anoField.key] || '') : '';
+      currentGroup = { titulo: [p, a].filter(Boolean).join(' ') || 'Todos', items: [] };
+      groups.push(currentGroup);
+      lastKey = key;
+    }
+    currentGroup.items.push(i);
+  });
+
+  document.getElementById('print-area').innerHTML = `
+    <div class="cl-header">
+      <h1>${escapeHtml(currentCollectionMeta.icon || '')} ${escapeHtml(currentCollectionMeta.name)}</h1>
+      <p>Checklist — ${fecha} — ${tengo}/${total} conseguidos</p>
+    </div>
+    <div class="cl-grid">
+      ${groups.map(g => `
+        <div class="cl-group">
+          <div class="cl-group-title">${escapeHtml(g.titulo)}</div>
+          ${g.items.map(i => {
+            const ceca = cecaField ? (i.campos?.[cecaField.key] || '') : '';
+            const valor = valorField ? (i.campos?.[valorField.key] || i.nombre || '') : (i.nombre || '');
+            return `<div class="cl-cell ${i.tengo ? 'ok' : ''}">
+              <span class="cl-box">${i.tengo ? '✔' : ''}</span>
+              <span class="cl-code">${escapeHtml(i.codigo||'')}</span>
+              <span class="cl-name">${escapeHtml(valor)}${ceca ? ' · '+escapeHtml(ceca.split(' ')[0]) : ''}</span>
+            </div>`;
+          }).join('')}
+        </div>`).join('')}
+    </div>
+  `;
 }
 
 /* =========================================================================
