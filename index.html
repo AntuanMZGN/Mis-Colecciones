@@ -69,6 +69,10 @@
   .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0;}
   .toolbar .stat{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:.8rem;}
   .toolbar .stat b{font-size:1.05rem;color:var(--brass);display:block;}
+  .detail-header-row{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:14px 0 10px;}
+  .stats-inline{display:flex;gap:10px;flex-wrap:wrap;}
+  .stats-inline .stat{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:.75rem;text-align:center;min-width:64px;}
+  .stats-inline .stat b{font-size:1rem;color:var(--brass);display:block;line-height:1.2;}
   .filter-select{max-width:180px;}
   .filter-select.active{border-color:var(--brass);color:var(--brass);}
   th.sortable{cursor:pointer;user-select:none;white-space:nowrap;}
@@ -164,6 +168,8 @@
     table{font-size:.76rem;}
     thead th,tbody td{padding:7px 8px;}
     .modal{padding:16px;}
+    .detail-header-row{flex-direction:column;align-items:flex-start;gap:8px;}
+    .stats-inline .stat{min-width:56px;padding:5px 9px;}
   }
 </style>
 </head>
@@ -212,15 +218,17 @@
 
     <!-- Vista: detalle de una colección -->
     <div id="view-detail" style="display:none;">
-      <div class="toolbar">
+      <div class="detail-header-row">
         <h2 id="detail-title" style="font-size:1.3rem;color:var(--brass);"></h2>
+        <div id="detail-stats" class="stats-inline"></div>
       </div>
-      <div class="toolbar" id="detail-stats"></div>
       <div class="toolbar">
         <input class="searchbar" id="detail-search" placeholder="Buscar...">
         <button class="btn" id="btn-add-item">+ Añadir elemento</button>
-        <button class="btn" id="btn-snapshot">📸 Guardar snapshot / Informe</button>
-        <button class="btn" id="btn-history">📈 Ver historial</button>
+        <button class="btn" id="btn-mark-all">✅ Marcar todo</button>
+        <button class="btn" id="btn-unmark-all">⬜ Desmarcar todo</button>
+        <button class="btn" id="btn-snapshot">📸 Snapshot / Informe</button>
+        <button class="btn" id="btn-history">📈 Historial</button>
         <button class="btn" id="btn-collection-settings">⚙️</button>
       </div>
       <div class="toolbar" id="detail-filters"></div>
@@ -737,6 +745,8 @@ window.setFilter = setFilter;
 window.clearFilters = clearFilters;
 window.setSort = setSort;
 
+let lastFilteredItems = [];
+
 function renderDetailBody(){
   const body = document.getElementById('detail-body');
   const search = (document.getElementById('detail-search').value || '').toLowerCase();
@@ -765,6 +775,13 @@ function renderDetailBody(){
       return sortState.dir === 'asc' ? cmp : -cmp;
     });
   }
+
+  lastFilteredItems = items;
+
+  // Conserva la posición de scroll de la tabla para que marcar una casilla
+  // no "salte" arriba al volver a dibujar la lista.
+  const prevWrap = body.querySelector('.table-wrap');
+  const prevScroll = prevWrap ? prevWrap.scrollTop : 0;
 
   if (currentCollectionMeta.type === 'libre') {
     body.innerHTML = `<div class="card-list">${items.map(renderLibreCard).join('') || '<p style="color:var(--muted);">Sin elementos todavía.</p>'}</div>`;
@@ -795,9 +812,35 @@ function renderDetailBody(){
         </tbody>
       </table></div>
       <p style="font-size:.75rem;color:var(--muted);margin-top:8px;">Mostrando ${items.length} de ${currentItems.length} elementos.</p>`;
+    const newWrap = body.querySelector('.table-wrap');
+    if (newWrap && prevScroll) newWrap.scrollTop = prevScroll;
   }
 }
 document.getElementById('detail-search').addEventListener('input', renderDetailBody);
+
+document.getElementById('btn-mark-all').onclick = () => bulkSetTengo(true);
+document.getElementById('btn-unmark-all').onclick = () => bulkSetTengo(false);
+
+async function bulkSetTengo(value){
+  const items = lastFilteredItems.filter(i => !!i.tengo !== value);
+  if (!items.length) { showToast(value ? 'Ya estaban todos marcados' : 'Ya estaban todos sin marcar'); return; }
+  const etiqueta = Object.keys(filterState).length || document.getElementById('detail-search').value
+    ? `los ${items.length} elementos visibles (según tu búsqueda/filtros)`
+    : `los ${items.length} elementos de la colección`;
+  if (!confirm(`¿${value ? 'Marcar como Tengo' : 'Desmarcar'} ${etiqueta}?`)) return;
+
+  let batch = writeBatch(db);
+  let count = 0;
+  for (const item of items) {
+    batch.update(doc(db, itemsPath(currentCollectionId), item.id), { tengo: value });
+    count++;
+    if (count % 450 === 0) { await batch.commit(); batch = writeBatch(db); }
+  }
+  await batch.commit();
+  await updateDoc(doc(db, colPath(), currentCollectionId), { 'stats.tengo': increment(value ? items.length : -items.length) });
+  showToast(value ? `${items.length} elementos marcados` : `${items.length} elementos desmarcados`);
+}
+window.bulkSetTengo = bulkSetTengo;
 
 function renderLibreCard(i){
   const fields = currentCollectionMeta.fields || [];
