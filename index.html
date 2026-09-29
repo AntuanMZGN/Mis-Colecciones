@@ -174,6 +174,38 @@
     #print-area .cl-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   }
 
+
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+  .chip{background:var(--panel2);border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-size:.78rem;cursor:pointer;color:var(--text);}
+  .chip:hover,.chip.on{border-color:var(--brass);color:var(--brass);}
+  .hint{font-size:.76rem;color:var(--muted);line-height:1.45;margin:8px 0;}
+  .hint a{cursor:pointer;}
+  .frow{display:flex;gap:6px;margin-bottom:8px;align-items:center;}
+  .frow .fnum{width:22px;text-align:center;color:var(--brass);font-size:.8rem;flex:none;}
+  .frow input{flex:1;min-width:0;} .frow select{width:118px;flex:none;}
+  .frow button{padding:6px 8px;}
+  .err{border-color:var(--red)!important;}
+  .opt{display:flex;gap:8px;align-items:flex-start;font-size:.8rem;margin:8px 0;cursor:pointer;color:var(--text);}
+  .opt input{width:auto;margin-top:2px;}
+  .summary{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:.82rem;margin:10px 0;line-height:1.6;}
+  .summary b{color:var(--brass);}
+  .prev{overflow-x:auto;border:1px solid var(--border);border-radius:8px;margin:8px 0;}
+  .prev table{font-size:.72rem;} .prev td,.prev th{padding:4px 8px;}
+  .actions-list{display:flex;flex-direction:column;gap:8px;margin:12px 0;}
+  .actions-list .btn{justify-content:flex-start;width:100%;}
+  #progress{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;z-index:200;}
+  #progress.open{display:flex;}
+  #progress .box{background:var(--panel);border:1px solid var(--brass);border-radius:12px;padding:22px 26px;min-width:280px;text-align:center;}
+  #progress .pb{height:8px;background:var(--panel2);border-radius:4px;margin-top:12px;overflow:hidden;}
+  #progress .pb>div{height:100%;background:var(--brass);width:0;transition:width .15s;}
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;}
+  .gallery figure{margin:0;background:var(--panel2);border:1px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer;}
+  .gallery img{width:100%;height:110px;object-fit:cover;display:block;}
+  .gallery figcaption{font-size:.7rem;padding:4px 6px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  #lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:150;padding:16px;}
+  #lightbox.open{display:flex;} #lightbox img{max-width:100%;max-height:82vh;border-radius:8px;} #lightbox p{color:#ddd;font-size:.85rem;margin:10px 0 0;}
+  .modal.wide{max-width:880px;}
+
   @media (max-width:680px){
     .wrap{padding:12px 10px 50px;}
     header.top{flex-direction:column;align-items:flex-start;gap:8px;}
@@ -209,6 +241,8 @@
       <div class="sub">Catalogación y seguimiento</div>
     </div>
     <div class="userbox">
+      <a class="btn small" href="manual.html" target="_blank" style="text-decoration:none;">📖 Manual</a>
+      <button class="btn small" id="btn-backup">💾 Copia de seguridad</button>
       <img id="user-avatar" src="" alt="">
       <span id="user-name"></span>
       <button class="btn small" id="btn-logout">Salir</button>
@@ -241,6 +275,7 @@
         <button class="btn" id="btn-mark-all">✅ Marcar todo</button>
         <button class="btn" id="btn-unmark-all">⬜ Desmarcar todo</button>
         <button class="btn" id="btn-snapshot">📸 Snapshot / Informe</button>
+        <button class="btn" id="btn-gallery">🖼️ Galería</button>
         <button class="btn" id="btn-history">📈 Historial</button>
         <button class="btn" id="btn-collection-settings">⚙️</button>
       </div>
@@ -258,53 +293,93 @@
     <button class="modal-close" onclick="closeModal('modal-new-collection')">✕</button>
     <h2>Nueva colección</h2>
     <div class="field"><label>Nombre de la colección</label><input id="nc-name" placeholder="Ej. Cajas metálicas antiguas"></div>
-    <div class="field"><label>Icono (un emoji)</label><input id="nc-icon" placeholder="📦" maxlength="2" value="📦"></div>
+    <div class="field"><label>Icono</label><input id="nc-icon" maxlength="2" value="📦" style="width:80px;">
+      <div class="chips" id="nc-icons"></div></div>
     <label>¿Cómo quieres empezarla?</label>
     <div class="option-row">
       <div class="option-btn" onclick="selectNewCollectionMode('libre')">
-        <b>📋 Ficha libre (sin checklist previa)</b>
-        <span>Vas añadiendo elementos según los consigues. Ideal para cajas, objetos únicos, piezas sueltas...</span>
+        <b>📋 Ficha libre</b>
+        <span>Sin lista previa: vas añadiendo piezas según las consigues (cajas, objetos únicos, piezas sueltas...). Tú eliges qué datos anotar de cada una.</span>
       </div>
       <div class="option-btn" onclick="selectNewCollectionMode('import')">
-        <b>📥 Importar checklist (Excel / CSV)</b>
-        <span>Ya tienes o consigues un listado completo (cromos, monedas...) y lo subes de una vez.</span>
-      </div>
-      <div class="option-btn" onclick="selectNewCollectionMode('ask')">
-        <b>🔎 Pídeme que te la construya</b>
-        <span>Dime en el chat qué colección es (ej. "álbum Panini Liga 2025-26") y la investigo y preparo por ti.</span>
+        <b>📥 Importar una lista (Excel / CSV)</b>
+        <span>Ya tienes el listado completo (cromos, monedas...) y lo subes de una vez para ir marcando lo que tienes.</span>
       </div>
     </div>
+    <p class="hint">¿No tienes la lista? Puedes pedirle a Claude, en tu conversación de claude.ai (fuera de esta app), que te prepare un archivo CSV; después lo subes aquí con la segunda opción.</p>
   </div>
 </div>
 
-<!-- Definir campos para colección libre -->
 <div class="backdrop" id="modal-libre-fields">
   <div class="modal">
     <button class="modal-close" onclick="closeModal('modal-libre-fields')">✕</button>
-    <h2>Campos de la ficha</h2>
-    <p style="font-size:.8rem;color:var(--muted);">Define qué datos quieres anotar de cada elemento. Puedes editarlo luego.</p>
-    <div id="libre-fields-list"></div>
-    <button class="btn small" onclick="addLibreFieldRow()">+ Añadir campo</button>
-    <div style="margin-top:18px;text-align:right;">
-      <button class="btn primary" onclick="createLibreCollection()">Crear colección</button>
+    <h2 id="fields-title">Campos de la ficha</h2>
+    <p class="hint" id="fields-help">Elige qué datos quieres anotar de cada pieza. El primer campo (★) será el título de la ficha.</p>
+    <div class="chips" id="fields-presets"></div>
+    <div id="libre-fields-list" style="margin-top:12px;"></div>
+    <button class="btn small" id="btn-add-field">+ Añadir campo</button>
+    <div style="margin-top:18px;text-align:right;"><button class="btn primary" id="btn-fields-ok">Crear colección</button></div>
+  </div>
+</div>
+
+<div class="backdrop" id="modal-import">
+  <div class="modal wide">
+    <button class="modal-close" onclick="closeModal('modal-import')">✕</button>
+    <h2 id="import-title">Importar lista</h2>
+    <div class="field"><label>Archivo Excel (.xlsx) o CSV</label><input type="file" id="import-file" accept=".xlsx,.xls,.csv,.txt"></div>
+    <p class="hint">Necesita una columna con un <b>código único</b> por elemento (número, referencia...). <a id="dl-template">Descargar plantilla CSV de ejemplo</a></p>
+    <div id="import-mapping" style="display:none;">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <div class="field" style="flex:1;min-width:200px;"><label>Columna del código (única)</label><select id="import-col-codigo"></select></div>
+        <div class="field" style="flex:1;min-width:200px;"><label>Columna del nombre</label><select id="import-col-nombre"></select></div>
+      </div>
+      <div class="prev" id="import-preview"></div>
+      <label class="opt" id="opt-estado-w"><input type="checkbox" id="imp-opt-estado"><span>Importar también las columnas <b>Tengo / Repe / Notas</b> si vienen en el archivo</span></label>
+      <div id="import-update-opts">
+        <label class="opt"><input type="checkbox" id="imp-opt-update" checked><span>Actualizar nombre y datos de los elementos que ya existen (no toca fotos)</span></label>
+        <label class="opt"><input type="checkbox" id="imp-opt-delete"><span>Eliminar los elementos que ya no aparezcan en el archivo</span></label>
+      </div>
+      <div class="summary" id="import-summary"></div>
+      <div style="text-align:right;"><button class="btn primary" id="btn-import-ok">Importar</button></div>
     </div>
   </div>
 </div>
 
-<!-- Importar archivo -->
-<div class="backdrop" id="modal-import">
+<div class="backdrop" id="modal-settings">
   <div class="modal">
-    <button class="modal-close" onclick="closeModal('modal-import')">✕</button>
-    <h2>Importar checklist</h2>
-    <div class="field"><label>Archivo Excel (.xlsx) o CSV</label><input type="file" id="import-file" accept=".xlsx,.xls,.csv"></div>
-    <div id="import-mapping" style="display:none;">
-      <div class="field"><label>Columna que identifica cada elemento (código/número)</label><select id="import-col-codigo"></select></div>
-      <div class="field"><label>Columna con el nombre/descripción</label><select id="import-col-nombre"></select></div>
-      <p style="font-size:.76rem;color:var(--muted);">El resto de columnas se guardarán también como datos adicionales de cada elemento.</p>
-      <div style="text-align:right;"><button class="btn primary" onclick="confirmImport()">Importar</button></div>
+    <button class="modal-close" onclick="closeModal('modal-settings')">✕</button>
+    <h2>Ajustes de la colección</h2>
+    <div class="field"><label>Nombre</label><input id="set-name"></div>
+    <div class="field"><label>Icono</label><input id="set-icon" maxlength="2" style="width:80px;"></div>
+    <div class="actions-list">
+      <button class="btn" id="act-fields">🧩 Editar campos (columnas) de la colección</button>
+      <button class="btn" id="act-update">🔄 Actualizar desde un archivo (sin perder tus marcas)</button>
+      <button class="btn" id="act-csv">⬇️ Exportar a CSV</button>
+      <button class="btn" id="act-xlsx">⬇️ Exportar a Excel (.xlsx)</button>
+      <button class="btn" id="act-stats">🔢 Recalcular contadores</button>
+      <button class="btn danger" onclick="deleteCurrentCollection()">🗑 Eliminar colección completa</button>
     </div>
+    <div style="text-align:right;"><button class="btn primary" onclick="saveCollectionSettings()">Guardar nombre e icono</button></div>
   </div>
 </div>
+
+<div class="backdrop" id="modal-backup">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-backup')">✕</button>
+    <h2>Copia de seguridad</h2>
+    <p class="hint">Descarga todas tus colecciones (elementos, marcas, fotos e historial) en un solo archivo. Guárdalo en tu ordenador o en la nube. Recomendado: una vez al mes.</p>
+    <div class="actions-list"><button class="btn primary" id="btn-export-all">⬇️ Descargar copia completa (.json)</button></div>
+    <div class="field"><label>Restaurar desde una copia</label><input type="file" id="restore-file" accept=".json"></div>
+    <p class="hint">Restaurar añade las colecciones de la copia; si alguna ya existe, se crea una copia aparte con "(restaurada)" en el nombre. Nunca borra lo que tienes.</p>
+  </div>
+</div>
+
+<div class="backdrop" id="modal-gallery">
+  <div class="modal wide"><button class="modal-close" onclick="closeModal('modal-gallery')">✕</button>
+    <h2>Galería de fotos</h2><div id="gallery-body" class="gallery"></div></div>
+</div>
+<div id="lightbox" onclick="this.classList.remove('open')"><img id="lb-img" alt=""><p id="lb-cap"></p></div>
+<div id="progress"><div class="box"><div id="pg-title">Trabajando...</div><div class="pb"><div id="pg-bar"></div></div><div id="pg-txt" class="hint"></div></div></div>
 
 <!-- Añadir / editar elemento -->
 <div class="backdrop" id="modal-item">
@@ -324,22 +399,15 @@
 <div class="backdrop" id="modal-report-format">
   <div class="modal">
     <button class="modal-close" onclick="closeModal('modal-report-format')">✕</button>
-    <h2>¿Qué tipo de informe quieres?</h2>
+    <h2>Informe y snapshot</h2>
     <div class="field">
-      <label class="check-wrapper" style="cursor:pointer;">
-        <input type="checkbox" id="report-solo-filtrado">
-        <span>Usar solo lo que está filtrado/buscado ahora mismo (<span id="report-filtro-count"></span>). Si lo dejas sin marcar, sale la colección completa.</span>
-      </label>
+      <label class="opt"><input type="checkbox" id="report-solo-filtrado"><span>Usar solo lo filtrado/buscado ahora (<span id="report-filtro-count"></span>). Sin marcar: colección completa.</span></label>
+      <label class="opt"><input type="checkbox" id="report-save-snap" checked><span>Guardar un punto en el historial de progreso (snapshot)</span></label>
     </div>
     <div class="option-row">
-      <div class="option-btn" onclick="closeModal('modal-report-format');generateReport('agrupado')">
-        <b>📊 Informe agrupado</b>
-        <span>Organizado por país (y año dentro de cada país), ordenado por valor, con casillas de Tengo/Repe. Pensado para imprimir en color o blanco y negro.</span>
-      </div>
-      <div class="option-btn" onclick="closeModal('modal-report-format');generateReport('checklist')">
-        <b>📋 Checklist compacta</b>
-        <span>Cuadrícula densa tipo álbum de cromos, con recuadros pequeños numerados, lista para imprimir y marcar a mano.</span>
-      </div>
+      <div class="option-btn" onclick="closeModal('modal-report-format');generateReport('agrupado')"><b>📊 Informe agrupado</b><span>Por país y año, ordenado por valor, con casillas de Tengo/Repe. Válido para color y blanco y negro.</span></div>
+      <div class="option-btn" onclick="closeModal('modal-report-format');generateReport('checklist')"><b>📋 Checklist compacta</b><span>Cuadrícula densa tipo álbum, para imprimir y marcar a mano.</span></div>
+      <div class="option-btn" onclick="closeModal('modal-report-format');saveSnapshot(true)"><b>📸 Solo guardar snapshot</b><span>Guarda el punto en el historial sin imprimir nada.</span></div>
     </div>
   </div>
 </div>
@@ -353,16 +421,6 @@
 </div>
 
 <!-- Ajustes colección -->
-<div class="backdrop" id="modal-settings">
-  <div class="modal">
-    <button class="modal-close" onclick="closeModal('modal-settings')">✕</button>
-    <h2>Ajustes de la colección</h2>
-    <div class="field"><label>Nombre</label><input id="set-name"></div>
-    <div class="field"><label>Icono</label><input id="set-icon" maxlength="2"></div>
-    <div style="margin:16px 0;"><button class="btn danger" onclick="deleteCurrentCollection()">🗑 Eliminar colección completa</button></div>
-    <div style="text-align:right;"><button class="btn primary" onclick="saveCollectionSettings()">Guardar cambios</button></div>
-  </div>
-</div>
 
 <div id="print-area"></div>
 <div class="toast" id="toast"></div>
@@ -387,13 +445,15 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
-  getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc,
+  getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc,
   deleteDoc, query, orderBy, onSnapshot, writeBatch, increment, serverTimestamp, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
+let db;
+try { db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
+catch (e) { db = getFirestore(app); }
 const provider = new GoogleAuthProvider();
 
 /* =========================================================================
@@ -446,6 +506,7 @@ function snapshotsPath(cid){ return `users/${uid()}/collections/${cid}/snapshots
    NAVEGACIÓN
    ========================================================================= */
 function navList(){
+  flushStatsSync();
   currentCollectionId = null;
   if (unsubItems) { unsubItems(); unsubItems = null; }
   document.getElementById('view-list').style.display = 'block';
@@ -506,68 +567,93 @@ function renderCollectionsGrid(){
 /* =========================================================================
    NUEVA COLECCIÓN
    ========================================================================= */
-document.getElementById('btn-new-collection').onclick = () => openModal('modal-new-collection');
+document.getElementById('btn-new-collection').onclick = () => {
+  document.getElementById('nc-name').value = ''; document.getElementById('nc-name').classList.remove('err');
+  openModal('modal-new-collection');
+};
+const ICONS = ['🪙','🃏','📦','📚','🖼️','🎫','⚽','🧸','🚗','🏷️','📀','🔑'];
+document.getElementById('nc-icons').innerHTML = ICONS.map(i => `<span class="chip" data-i="${i}">${i}</span>`).join('');
+document.getElementById('nc-icons').addEventListener('click', e => { const c = e.target.closest('.chip'); if (c) document.getElementById('nc-icon').value = c.dataset.i; });
 
-function selectNewCollectionMode(mode){
-  const name = document.getElementById('nc-name').value.trim();
-  const icon = document.getElementById('nc-icon').value.trim() || '📚';
-  if (!name) { showToast('Ponle un nombre a la colección primero'); return; }
-  if (mode === 'libre') {
-    closeModal('modal-new-collection');
-    libreFieldDraft = [
-      { key: 'nombre', label: 'Nombre / Denominación', type: 'text' },
-      { key: 'notas', label: 'Notas', type: 'textarea' }
-    ];
-    window._pendingCollection = { name, icon, type: 'libre' };
-    renderLibreFieldsEditor();
-    openModal('modal-libre-fields');
-  } else if (mode === 'import') {
-    closeModal('modal-new-collection');
-    window._pendingCollection = { name, icon, type: 'checklist' };
-    openModal('modal-import');
-  } else if (mode === 'ask') {
-    closeModal('modal-new-collection');
-    showToast('Cuéntame en el chat qué colección quieres y la preparo');
-  }
+const PRESETS = {
+  'Genérica': ['Nombre','Descripción|textarea','Estado','Ubicación','Notas|textarea'],
+  'Cajas y latas': ['Denominación','Marca','Época','País','Material','Dimensiones','Estado','Ubicación','Valor estimado (€)|number','Notas|textarea'],
+  'Monedas sueltas': ['Denominación','País','Año|number','Ceca','Estado','Ubicación','Valor estimado (€)|number','Notas|textarea'],
+  'Libros': ['Título','Autor','Editorial','Año|number','Estado','Ubicación','Notas|textarea']
+};
+const mkFields = arr => arr.map(x => { const [label, type] = x.split('|'); return { label, type: type || 'text' }; });
+let fieldsDraft = [], fieldsCtx = 'new';   // 'new' = colección libre nueva · 'edit' = editar campos existentes
+
+function uniqueKey(label, used){
+  let k = slugify(label), n = 2; const base = k;
+  while (used.has(k)) k = base + '_' + (n++);
+  used.add(k); return k;
 }
-window.selectNewCollectionMode = selectNewCollectionMode;
-
-function renderLibreFieldsEditor(){
-  const list = document.getElementById('libre-fields-list');
-  list.innerHTML = libreFieldDraft.map((f, i) => `
-    <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center;">
-      <input value="${escapeHtml(f.label)}" onchange="libreFieldDraft[${i}].label=this.value" style="flex:1;">
-      <select onchange="libreFieldDraft[${i}].type=this.value" style="width:120px;">
-        <option value="text" ${f.type==='text'?'selected':''}>Texto</option>
-        <option value="number" ${f.type==='number'?'selected':''}>Número</option>
-        <option value="date" ${f.type==='date'?'selected':''}>Fecha</option>
-        <option value="textarea" ${f.type==='textarea'?'selected':''}>Texto largo</option>
-      </select>
-      <button class="btn small danger" onclick="removeLibreField(${i})">✕</button>
+// Conserva la clave de los campos ya existentes y crea claves únicas para los nuevos.
+function finalizeFields(draft){
+  const used = new Set(draft.filter(f => f.key).map(f => f.key));
+  return draft.filter(f => f.label.trim()).map(f => ({ key: f.key || uniqueKey(f.label, used), label: f.label.trim(), type: f.type || 'text' }));
+}
+function renderFieldsEditor(){
+  const box = document.getElementById('libre-fields-list');
+  box.innerHTML = fieldsDraft.map((f, i) => `
+    <div class="frow" data-i="${i}">
+      <span class="fnum">${i === 0 && fieldsCtx === 'new' ? '★' : i + 1}</span>
+      <input data-k="label" value="${escapeHtml(f.label)}" placeholder="Nombre del campo">
+      <select data-k="type">${[['text','Texto'],['number','Número'],['date','Fecha'],['textarea','Texto largo']].map(([v, l]) => `<option value="${v}" ${f.type === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      <button class="btn small" data-a="up" title="Subir">↑</button><button class="btn small" data-a="down" title="Bajar">↓</button>
+      <button class="btn small danger" data-a="del" title="Quitar">✕</button>
     </div>`).join('');
 }
-function addLibreFieldRow(){
-  libreFieldDraft.push({ key: 'campo'+Date.now(), label: 'Nuevo campo', type: 'text' });
-  renderLibreFieldsEditor();
-}
-function removeLibreField(i){ libreFieldDraft.splice(i,1); renderLibreFieldsEditor(); }
-window.addLibreFieldRow = addLibreFieldRow;
-window.removeLibreField = removeLibreField;
-window.libreFieldDraft = libreFieldDraft;
+const fbox = document.getElementById('libre-fields-list');
+const setFieldProp = e => { const r = e.target.closest('.frow'); if (r && e.target.dataset.k) fieldsDraft[+r.dataset.i][e.target.dataset.k] = e.target.value; };
+fbox.addEventListener('input', setFieldProp); fbox.addEventListener('change', setFieldProp);
+fbox.addEventListener('click', e => {
+  const b = e.target.closest('[data-a]'); if (!b) return;
+  const i = +b.closest('.frow').dataset.i, a = b.dataset.a;
+  if (a === 'del') fieldsDraft.splice(i, 1);
+  if (a === 'up' && i > 0) [fieldsDraft[i-1], fieldsDraft[i]] = [fieldsDraft[i], fieldsDraft[i-1]];
+  if (a === 'down' && i < fieldsDraft.length - 1) [fieldsDraft[i+1], fieldsDraft[i]] = [fieldsDraft[i], fieldsDraft[i+1]];
+  renderFieldsEditor();
+});
+document.getElementById('btn-add-field').onclick = () => {
+  fieldsDraft.push({ label: '', type: 'text' }); renderFieldsEditor();
+  const inputs = fbox.querySelectorAll('input[data-k=label]'); inputs[inputs.length - 1].focus();
+};
+document.getElementById('fields-presets').innerHTML = Object.keys(PRESETS).map(n => `<span class="chip" data-p="${n}">${n}</span>`).join('');
+document.getElementById('fields-presets').addEventListener('click', e => {
+  const c = e.target.closest('.chip'); if (!c) return;
+  fieldsDraft = mkFields(PRESETS[c.dataset.p]); renderFieldsEditor();
+});
 
-async function createLibreCollection(){
-  const pc = window._pendingCollection;
-  const fields = libreFieldDraft.map(f => ({...f, key: slugify(f.label)}));
-  const ref = await addDoc(collection(db, colPath()), {
-    name: pc.name, icon: pc.icon, type: 'libre', fields,
-    stats: { total: 0, tengo: 0 }, createdAt: serverTimestamp()
-  });
-  closeModal('modal-libre-fields');
-  showToast('Colección creada');
-  openCollection(ref.id);
+function selectNewCollectionMode(mode){
+  const nameEl = document.getElementById('nc-name'), name = nameEl.value.trim();
+  const icon = document.getElementById('nc-icon').value.trim() || '📚';
+  if (!name) { nameEl.classList.add('err'); nameEl.focus(); showToast('Ponle un nombre a la colección'); return; }
+  closeModal('modal-new-collection');
+  window._pendingCollection = { name, icon };
+  if (mode === 'libre') {
+    fieldsCtx = 'new'; fieldsDraft = mkFields(PRESETS['Genérica']);
+    document.getElementById('fields-title').textContent = 'Campos de la ficha';
+    document.getElementById('fields-presets').style.display = '';
+    document.getElementById('btn-fields-ok').textContent = 'Crear colección';
+    renderFieldsEditor(); openModal('modal-libre-fields');
+  } else openImport('new');
 }
-window.createLibreCollection = createLibreCollection;
 window.selectNewCollectionMode = selectNewCollectionMode;
+
+document.getElementById('btn-fields-ok').onclick = async () => {
+  const fields = finalizeFields(fieldsDraft);
+  if (!fields.length) { showToast('Añade al menos un campo con nombre'); return; }
+  if (fieldsCtx === 'new') {
+    const pc = window._pendingCollection;
+    const ref = await addDoc(collection(db, colPath()), { name: pc.name, icon: pc.icon, type: 'libre', fields, stats: { total: 0, tengo: 0 }, createdAt: serverTimestamp() });
+    closeModal('modal-libre-fields'); showToast('Colección creada'); openCollection(ref.id);
+  } else {
+    await updateDoc(doc(db, colPath(), currentCollectionId), { fields });
+    closeModal('modal-libre-fields'); showToast('Campos actualizados');
+  }
+};
 
 /* =========================================================================
    IMPORTAR EXCEL / CSV  (usa SheetJS, cargado bajo demanda)
@@ -584,116 +670,211 @@ function ensureSheetJs(){
   });
 }
 
+function detectDelimiter(text){
+  const first = text.split(/\r?\n/)[0] || '';
+  const c = { ',': (first.match(/,/g)||[]).length, ';': (first.match(/;/g)||[]).length, '\t': (first.match(/\t/g)||[]).length };
+  return Object.keys(c).sort((a, b) => c[b] - c[a])[0];
+}
 function parseCsvText(text){
-  // Parser CSV ligero (sin dependencias externas): soporta comillas y comas dentro de campos.
-  const rows = [];
-  let row = [], field = '', inQuotes = false;
+  text = text.replace(/^\uFEFF/, '');
+  const D = detectDelimiter(text), rows = [];
+  let row = [], field = '', inQ = false;
   for (let i = 0; i < text.length; i++) {
-    const c = text[i], next = text[i+1];
-    if (inQuotes) {
-      if (c === '"' && next === '"') { field += '"'; i++; }
-      else if (c === '"') { inQuotes = false; }
-      else { field += c; }
-    } else {
-      if (c === '"') inQuotes = true;
-      else if (c === ',') { row.push(field); field = ''; }
-      else if (c === '\r') { /* skip */ }
-      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
-      else field += c;
-    }
+    const c = text[i], n = text[i+1];
+    if (inQ) { if (c === '"' && n === '"') { field += '"'; i++; } else if (c === '"') inQ = false; else field += c; }
+    else if (c === '"') inQ = true;
+    else if (c === D) { row.push(field); field = ''; }
+    else if (c === '\r') {}
+    else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+    else field += c;
   }
   if (field.length || row.length) { row.push(field); rows.push(row); }
   const headers = rows.shift().map(h => h.trim());
-  return rows.filter(r => r.length > 1 || r[0] !== '').map(r => {
-    const obj = {};
-    headers.forEach((h, idx) => obj[h] = (r[idx] ?? '').trim());
-    return obj;
-  });
+  return rows.filter(r => r.length > 1 || r[0] !== '').map(r => { const o = {}; headers.forEach((h, i) => o[h] = (r[i] ?? '').trim()); return o; });
+}
+async function readRowsFromFile(file){
+  if (/\.(csv|txt)$/i.test(file.name)) return parseCsvText(await file.text());
+  await ensureSheetJs();
+  const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+  return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
 }
 
-document.getElementById('import-file').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  let rows;
-  if (file.name.toLowerCase().endsWith('.csv')) {
-    const text = await file.text();
-    rows = parseCsvText(text);
-  } else {
-    try {
-      await ensureSheetJs();
-    } catch (err) {
-      showToast('No se pudo cargar el lector de Excel (revisa tu conexión). Prueba a exportar el archivo como .csv.');
-      return;
-    }
-    const data = await file.arrayBuffer();
-    const wb = XLSX.read(data, { type: 'array' });
-    const sheet = wb.Sheets[wb.SheetNames[0]];
-    rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-  }
-  if (!rows.length) { showToast('El archivo está vacío'); return; }
-  importParsedRows = rows;
-  importHeaders = Object.keys(rows[0]);
-  const selCodigo = document.getElementById('import-col-codigo');
-  const selNombre = document.getElementById('import-col-nombre');
-  selCodigo.innerHTML = importHeaders.map(h => `<option>${escapeHtml(h)}</option>`).join('');
-  selNombre.innerHTML = importHeaders.map(h => `<option>${escapeHtml(h)}</option>`).join('');
-  // Evita que ambas columnas queden seleccionadas por defecto en el mismo campo.
-  if (importHeaders.length > 1) selNombre.selectedIndex = 1;
-  document.getElementById('import-mapping').style.display = 'block';
+const $ = id => document.getElementById(id);
+const norm = h => String(h).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+const SPECIAL = { tengo: ['tengo'], repetido: ['repe', 'repetido'], notas: ['notas', 'nota'] };
+const specialOf = h => Object.keys(SPECIAL).find(k => SPECIAL[k].includes(norm(h)));
+const truthy = v => ['1','si','sí','x','true','yes','verdadero'].includes(String(v).trim().toLowerCase());
+let imp = { mode: 'new', rows: [], headers: [] };
+
+function openImport(mode){
+  imp = { mode, rows: [], headers: [] };
+  $('import-file').value = ''; $('import-mapping').style.display = 'none';
+  $('import-title').textContent = mode === 'new' ? 'Importar lista: ' + window._pendingCollection.name : 'Actualizar «' + currentCollectionMeta.name + '» desde un archivo';
+  $('import-update-opts').style.display = mode === 'update' ? '' : 'none';
+  $('btn-import-ok').textContent = mode === 'new' ? 'Crear colección' : 'Aplicar cambios';
+  openModal('modal-import');
+}
+$('dl-template').onclick = () => download('plantilla-checklist.csv', '\uFEFFcodigo;nombre;categoria;notas\r\nA-001;Ejemplo uno;Serie A;\r\nA-002;Ejemplo dos;Serie A;\r\n', 'text/csv');
+
+$('import-file').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return;
+  try { imp.rows = await readRowsFromFile(file); }
+  catch (err) { showToast('No se pudo leer el archivo. Si es Excel, prueba a guardarlo como CSV.'); return; }
+  if (!imp.rows.length) { showToast('El archivo está vacío'); return; }
+  imp.headers = Object.keys(imp.rows[0]);
+  const opts = imp.headers.map(h => `<option>${escapeHtml(h)}</option>`).join('');
+  $('import-col-codigo').innerHTML = opts; $('import-col-nombre').innerHTML = opts;
+  const find = names => imp.headers.findIndex(h => names.includes(norm(h)));
+  let ic = find(['codigo','cod','id','ref','referencia','numero','num','n','no','nº']); if (ic < 0) ic = 0;
+  let inn = find(['nombre','name','descripcion','denominacion','titulo']); if (inn < 0) inn = imp.headers.length > 1 ? (ic === 0 ? 1 : 0) : 0;
+  $('import-col-codigo').selectedIndex = ic; $('import-col-nombre').selectedIndex = inn;
+  const hasSpecial = imp.headers.some(specialOf);
+  $('opt-estado-w').style.display = hasSpecial ? '' : 'none';
+  $('imp-opt-estado').checked = hasSpecial && imp.mode === 'new';
+  $('import-mapping').style.display = 'block';
+  refreshImportPreview();
 });
+['import-col-codigo','import-col-nombre','imp-opt-estado','imp-opt-update','imp-opt-delete'].forEach(id => $(id).addEventListener('change', refreshImportPreview));
 
-async function confirmImport(){
-  const pc = window._pendingCollection;
-  const colCodigo = document.getElementById('import-col-codigo').value;
-  const colNombre = document.getElementById('import-col-nombre').value;
-  const fields = importHeaders
-    .filter(h => h !== colCodigo && h !== colNombre)
-    .map(h => ({ key: slugify(h), label: h, type: 'text', sourceHeader: h }));
-
-  const ref = await addDoc(collection(db, colPath()), {
-    name: pc.name, icon: pc.icon, type: 'checklist', fields,
-    stats: { total: importParsedRows.length, tengo: 0 }, createdAt: serverTimestamp()
+// Plan de importación: agrupa por código, detecta duplicados y (en modo actualizar) compara con lo existente
+function buildImportPlan(){
+  const cC = $('import-col-codigo').value, cN = $('import-col-nombre').value;
+  const heads = imp.headers.filter(h => h !== cC && h !== cN && !specialOf(h));
+  const seen = new Set(); const rows = []; let dup = 0, empty = 0;
+  imp.rows.forEach(r => {
+    const code = String(r[cC] ?? '').trim();
+    if (!code) { empty++; return; }
+    if (seen.has(code)) { dup++; return; }
+    seen.add(code); rows.push({ code, r });
   });
-
-  let batch = writeBatch(db);
-  let count = 0;
-  for (const row of importParsedRows) {
-    const itemRef = doc(collection(db, itemsPath(ref.id)));
-    const extra = {};
-    fields.forEach(f => extra[f.key] = String(row[f.sourceHeader] ?? ''));
-    batch.set(itemRef, {
-      codigo: String(row[colCodigo] ?? ''),
-      nombre: String(row[colNombre] ?? ''),
-      campos: extra,
-      tengo: false, repetido: false, notas: '', tieneFoto: false,
-      createdAt: serverTimestamp()
+  const plan = { cC, cN, heads, rows, dup, empty, created: 0, updated: 0, same: 0, removed: 0, existingByCode: new Map() };
+  if (imp.mode === 'update') {
+    currentItems.forEach(i => plan.existingByCode.set(String(i.codigo).trim(), i));
+    const fileCodes = seen;
+    const fields = currentCollectionMeta.fields || [];
+    rows.forEach(row => {
+      const { code, r } = row, ex = plan.existingByCode.get(code); row.ex = ex;
+      if (!ex) { plan.created++; return; }
+      let ch = String(r[cN] ?? '') !== String(ex.nombre ?? '');
+      heads.forEach(h => { const f = fields.find(f => norm(f.label) === norm(h) || f.key === slugify(h)); if (!f || String(r[h] ?? '') !== String(ex.campos?.[f.key] ?? '')) ch = true; });
+      row.changed = ch; ch ? plan.updated++ : plan.same++;
     });
-    count++;
-    if (count % 450 === 0) { await batch.commit(); batch = writeBatch(db); }
-  }
-  await batch.commit();
-
-  closeModal('modal-import');
-  showToast(`Importados ${importParsedRows.length} elementos`);
-  openCollection(ref.id);
+    plan.removed = currentItems.filter(i => !fileCodes.has(String(i.codigo).trim())).length;
+  } else plan.created = rows.length;
+  return plan;
 }
-window.confirmImport = confirmImport;
+function refreshImportPreview(){
+  const p = buildImportPlan();
+  const cols = [p.cC, p.cN, ...p.heads.slice(0, 4)];
+  $('import-preview').innerHTML = '<table><thead><tr>' + cols.map(c => `<th>${escapeHtml(c)}</th>`).join('') + '</tr></thead><tbody>' +
+    imp.rows.slice(0, 4).map(r => '<tr>' + cols.map(c => `<td>${escapeHtml(r[c] ?? '')}</td>`).join('') + '</tr>').join('') + '</tbody></table>';
+  const del = imp.mode === 'update' && $('imp-opt-delete').checked;
+  $('import-summary').innerHTML = imp.mode === 'new'
+    ? `Se crearán <b>${p.created}</b> elementos.` + (p.dup ? ` Se omiten <b>${p.dup}</b> con código repetido.` : '') + (p.empty ? ` Se omiten <b>${p.empty}</b> sin código.` : '')
+    : `<b>${p.created}</b> nuevos · <b>${$('imp-opt-update').checked ? p.updated : 0}</b> a actualizar · ${p.same} sin cambios · <b>${del ? p.removed : 0}</b> a eliminar` +
+      (!del && p.removed ? ` <span class="hint">(${p.removed} no aparecen en el archivo y se conservan)</span>` : '') +
+      (p.dup ? `<br>Se omiten ${p.dup} con código repetido.` : '') + `<br><span class="hint">Tus marcas Tengo/Repe, notas y fotos se conservan.</span>`;
+}
+
+// ---- utilidades de escritura por lotes con barra de progreso ----
+let busy = false;
+function progress(title, done, total){
+  busy = true; $('progress').classList.add('open'); $('pg-title').textContent = title;
+  $('pg-bar').style.width = total ? Math.round(done / total * 100) + '%' : '0'; $('pg-txt').textContent = total ? `${done} / ${total}` : '';
+}
+function endProgress(){ busy = false; $('progress').classList.remove('open'); }
+async function commitOps(ops, title){
+  let batch = writeBatch(db), n = 0;
+  for (let i = 0; i < ops.length; i++) {
+    const [t, ref, data] = ops[i];
+    if (t === 'set') batch.set(ref, data); else if (t === 'update') batch.update(ref, data); else batch.delete(ref);
+    if (++n === 450) { await batch.commit(); batch = writeBatch(db); n = 0; progress(title, i + 1, ops.length); }
+  }
+  if (n) await batch.commit();
+  progress(title, ops.length, ops.length);
+}
+const calcStats = items => ({ total: items.length, tengo: items.filter(i => i.tengo).length });
+
+$('btn-import-ok').onclick = async () => {
+  const p = buildImportPlan(); if (!p.rows.length) { showToast('No hay filas con código'); return; }
+  const useEstado = $('imp-opt-estado').checked;
+  const getEstado = r => { const o = {}; imp.headers.forEach(h => { const k = specialOf(h); if (k) o[k] = k === 'notas' ? String(r[h] ?? '') : truthy(r[h]); }); return o; };
+  try {
+    progress(imp.mode === 'new' ? 'Creando colección...' : 'Actualizando...', 0, 1);
+    let cid, fields, existing = [];
+    if (imp.mode === 'new') {
+      fields = p.heads.map(h => ({ key: '', label: h, type: 'text' })); fields = finalizeFields(fields);
+      const pc = window._pendingCollection;
+      const ref = await addDoc(collection(db, colPath()), { name: pc.name, icon: pc.icon, type: 'checklist', fields, stats: { total: 0, tengo: 0 }, createdAt: serverTimestamp() });
+      cid = ref.id;
+    } else {
+      cid = currentCollectionId; fields = [...(currentCollectionMeta.fields || [])]; existing = currentItems;
+      const used = new Set(fields.map(f => f.key));
+      p.heads.forEach(h => { if (!fields.some(f => norm(f.label) === norm(h) || f.key === slugify(h))) fields.push({ key: uniqueKey(h, used), label: h, type: 'text' }); });
+    }
+    const keyOf = h => (fields.find(f => norm(f.label) === norm(h) || f.key === slugify(h)) || {}).key;
+    const campos = r => { const o = {}; p.heads.forEach(h => { const k = keyOf(h); if (k) o[k] = String(r[h] ?? ''); }); return o; };
+    const ops = []; let maxOrden = existing.reduce((m, i) => Math.max(m, typeof i.orden === 'number' ? i.orden : 0), existing.length);
+    const upd = imp.mode === 'update' && $('imp-opt-update').checked;
+    p.rows.forEach(({ code, r, ex, changed }) => {
+      const est = useEstado ? getEstado(r) : {};
+      if (ex) {
+        const estChanged = Object.keys(est).some(k => (k === 'notas' ? String(ex.notas || '') : !!ex[k === 'repetido' ? 'repetido' : k]) !== est[k]);
+        const data = { ...(upd && changed ? { nombre: String(r[p.cN] ?? ''), campos: { ...(ex.campos || {}), ...campos(r) } } : {}), ...(estChanged ? est : {}) };
+        if (Object.keys(data).length) ops.push(['update', doc(db, itemsPath(cid), ex.id), data]);
+      } else {
+        ops.push(['set', doc(collection(db, itemsPath(cid))), { codigo: code, nombre: String(r[p.cN] ?? ''), campos: campos(r), tengo: false, repetido: false, notas: '', ...est, tieneFoto: false, orden: ++maxOrden, createdAt: serverTimestamp() }]);
+      }
+    });
+    let removedIds = new Set();
+    if (imp.mode === 'update' && $('imp-opt-delete').checked) {
+      const fileCodes = new Set(p.rows.map(x => x.code));
+      existing.filter(i => !fileCodes.has(String(i.codigo).trim())).forEach(i => { removedIds.add(i.id); ops.push(['delete', doc(db, itemsPath(cid), i.id)]); if (i.tieneFoto) ops.push(['delete', doc(db, photosPath(cid), i.id)]); });
+    }
+    await commitOps(ops, 'Guardando cambios...');
+    // contadores exactos
+    const kept = existing.filter(i => !removedIds.has(i.id));
+    const newTengo = ops.filter(o => o[0] === 'set' && o[2].tengo).length;
+    const updTengo = new Map(ops.filter(o => o[0] === 'update' && 'tengo' in o[2]).map(o => [o[1].id, o[2].tengo]));
+    const tengo = kept.filter(i => updTengo.has(i.id) ? updTengo.get(i.id) : i.tengo).length + newTengo;
+    const total = kept.length + ops.filter(o => o[0] === 'set').length;
+    await updateDoc(doc(db, colPath(), cid), { fields, stats: { total, tengo } });
+    closeModal('modal-import');
+    showToast(imp.mode === 'new' ? `Colección creada con ${total} elementos` : 'Colección actualizada');
+    if (imp.mode === 'new') openCollection(cid);
+  } finally { endProgress(); }
+};
 
 /* =========================================================================
    ITEMS: escucha en vivo de la colección abierta
    ========================================================================= */
+const RL0 = 200; let renderLimit = RL0;
+let itemsFromServer = false, statsTimer = null, renderTimer = null;
+const searchStr = i => [i.codigo, i.nombre, i.notas, ...Object.values(i.campos || {})].join(' ').toLowerCase();
+const natural = (a, b) => String(a).localeCompare(String(b), 'es', { numeric: true });
+const cmpDefault = (a, b) => (typeof a.orden === 'number' && typeof b.orden === 'number') ? a.orden - b.orden : natural(a.codigo || a.nombre || '', b.codigo || b.nombre || '');
+function scheduleRender(){ clearTimeout(renderTimer); renderTimer = setTimeout(() => { renderDetailStats(); renderFiltersBar(); renderDetailBody(); }, 30); }
 function listenItems(cid){
   if (unsubItems) unsubItems();
-  sortState = { field: null, dir: 'asc' };
-  filterState = {};
-  const q = query(collection(db, itemsPath(cid)), orderBy('createdAt', 'asc'));
-  unsubItems = onSnapshot(q, (snap) => {
-    currentItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderDetailStats();
-    renderFiltersBar();
-    renderDetailBody();
+  sortState = { field: null, dir: 'asc' }; filterState = {}; renderLimit = RL0; itemsFromServer = false;
+  document.getElementById('detail-search').value = '';
+  unsubItems = onSnapshot(collection(db, itemsPath(cid)), (snap) => {
+    itemsFromServer = itemsFromServer || !snap.metadata || snap.metadata.fromCache === false;
+    currentItems = snap.docs.map(d => { const o = { id: d.id, ...d.data() }; o._s = searchStr(o); return o; }).sort(cmpDefault);
+    scheduleRender();
   });
 }
+// Los contadores de la portada se recalculan de forma absoluta (evita descuadres) y agrupados.
+function scheduleStatsSync(){ clearTimeout(statsTimer); statsTimer = setTimeout(syncStats, 1500); }
+async function syncStats(force){
+  clearTimeout(statsTimer);
+  if (!currentCollectionId || (!itemsFromServer && !force)) return;
+  const st = calcStats(currentItems), m = currentCollectionMeta?.stats || {};
+  if (st.total !== m.total || st.tengo !== m.tengo) await updateDoc(doc(db, colPath(), currentCollectionId), { stats: st });
+}
+function flushStatsSync(){ if (statsTimer) syncStats(); }
+function moreRows(){ renderLimit += RL0; renderDetailBody(); }
+window.moreRows = moreRows;
 
 let sortState = { field: null, dir: 'asc' };
 let filterState = {}; // { fieldKey: valorSeleccionado }
@@ -751,11 +932,13 @@ function renderFiltersBar(){
   box.innerHTML = html;
 }
 function setFilter(key, value){
+  renderLimit = RL0;
   if (value) filterState[key] = value; else delete filterState[key];
   renderDetailBody(); renderFiltersBar();
 }
-function clearFilters(){ filterState = {}; renderDetailBody(); renderFiltersBar(); }
+function clearFilters(){ renderLimit = RL0; filterState = {}; renderDetailBody(); renderFiltersBar(); }
 function setSort(field){
+  renderLimit = RL0;
   if (sortState.field === field) sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
   else { sortState.field = field; sortState.dir = 'asc'; }
   renderDetailBody();
@@ -771,7 +954,7 @@ function renderDetailBody(){
   const search = (document.getElementById('detail-search').value || '').toLowerCase();
   let items = currentItems;
 
-  if (search) items = items.filter(i => JSON.stringify(i).toLowerCase().includes(search));
+  if (search) items = items.filter(i => (i._s || '').includes(search));
 
   Object.keys(filterState).forEach(key => {
     const val = filterState[key];
@@ -818,7 +1001,7 @@ function renderDetailBody(){
           <th>Foto</th><th></th>
         </tr></thead>
         <tbody>
-          ${items.map(i => `
+          ${items.slice(0, renderLimit).map(i => `
             <tr class="${i.tengo ? 'got' : ''}">
               <td><input type="checkbox" ${i.tengo?'checked':''} onchange="toggleTengo('${i.id}', this.checked)"></td>
               <td>${escapeHtml(i.codigo||'')}</td>
@@ -830,12 +1013,13 @@ function renderDetailBody(){
             </tr>`).join('') || `<tr><td colspan="99" style="color:var(--muted);">Sin resultados con estos filtros.</td></tr>`}
         </tbody>
       </table></div>
-      <p style="font-size:.75rem;color:var(--muted);margin-top:8px;">Mostrando ${items.length} de ${currentItems.length} elementos.</p>`;
+      <p style="font-size:.75rem;color:var(--muted);margin-top:8px;">Mostrando ${Math.min(renderLimit, items.length)} de ${items.length}${items.length !== currentItems.length ? ' (colección: ' + currentItems.length + ')' : ''}. ${items.length > renderLimit ? '<a href="#" onclick="moreRows();return false;">Mostrar más</a> (se cargan solas al bajar)' : ''}</p>`;
     const newWrap = body.querySelector('.table-wrap');
     if (newWrap && prevScroll) newWrap.scrollTop = prevScroll;
+    if (newWrap) newWrap.onscroll = () => { if (items.length > renderLimit && newWrap.scrollTop + newWrap.clientHeight > newWrap.scrollHeight - 400) moreRows(); };
   }
 }
-document.getElementById('detail-search').addEventListener('input', renderDetailBody);
+let searchTimer; document.getElementById('detail-search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { renderLimit = RL0; renderDetailBody(); }, 150); });
 
 document.getElementById('btn-mark-all').onclick = () => bulkSetTengo(true);
 document.getElementById('btn-unmark-all').onclick = () => bulkSetTengo(false);
@@ -856,7 +1040,7 @@ async function bulkSetTengo(value){
     if (count % 450 === 0) { await batch.commit(); batch = writeBatch(db); }
   }
   await batch.commit();
-  await updateDoc(doc(db, colPath(), currentCollectionId), { 'stats.tengo': increment(value ? items.length : -items.length) });
+  scheduleStatsSync();
   showToast(value ? `${items.length} elementos marcados` : `${items.length} elementos desmarcados`);
 }
 window.bulkSetTengo = bulkSetTengo;
@@ -880,7 +1064,7 @@ async function toggleTengo(itemId, val){
   const before = currentItems.find(i => i.id === itemId)?.tengo || false;
   await updateDoc(doc(db, itemsPath(currentCollectionId), itemId), { tengo: val });
   if (before !== val) {
-    await updateDoc(doc(db, colPath(), currentCollectionId), { 'stats.tengo': increment(val ? 1 : -1) });
+    scheduleStatsSync();
   }
 }
 async function toggleRepetido(itemId, val){
@@ -1032,13 +1216,22 @@ async function loadPhotoIntoPreview(itemId, previewEl){
   }
 }
 
+function showLightbox(src, cap){ $('lb-img').src = src; $('lb-cap').textContent = cap || ''; $('lightbox').classList.add('open'); }
 async function viewPhoto(itemId){
   const snap = await getDoc(doc(db, photosPath(currentCollectionId), itemId));
   if (!snap.exists()) { showToast('Sin foto'); return; }
-  const w = window.open('', '_blank');
-  w.document.write(`<title>Foto</title><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="${snap.data().data}" style="max-width:100%;max-height:100vh;"></body>`);
+  const it = currentItems.find(i => i.id === itemId);
+  showLightbox(snap.data().data, it ? (it.codigo ? it.codigo + ' · ' : '') + (it.nombre || '') : '');
 }
 window.viewPhoto = viewPhoto;
+$('btn-gallery').onclick = async () => {
+  const box = $('gallery-body'); box.innerHTML = '<p class="hint">Cargando fotos...</p>'; openModal('modal-gallery');
+  const snap = await getDocs(collection(db, photosPath(currentCollectionId)));
+  if (!snap.docs.length) { box.innerHTML = '<p class="hint">Aún no has subido fotos en esta colección. Abre una ficha (✎) y añade una foto.</p>'; return; }
+  box.innerHTML = snap.docs.map(d => { const it = currentItems.find(i => i.id === d.id); const cap = it ? ((it.codigo ? it.codigo + ' · ' : '') + (it.nombre || '')) : 'Foto';
+    return `<figure data-cap="${escapeHtml(cap)}"><img src="${d.data().data}" alt=""><figcaption>${escapeHtml(cap)}</figcaption></figure>`; }).join('');
+};
+$('gallery-body').addEventListener('click', e => { const f = e.target.closest('figure'); if (f) showLightbox(f.querySelector('img').src, f.dataset.cap); });
 
 /* pre-cargar miniaturas visibles en tarjetas libres */
 const thumbObserver = new MutationObserver(() => {
@@ -1055,13 +1248,13 @@ thumbObserver.observe(document.getElementById('detail-body'), { childList: true,
 /* =========================================================================
    SNAPSHOT / INFORME
    ========================================================================= */
-document.getElementById('btn-snapshot').onclick = async () => {
-  const total = currentItems.length;
-  const tengo = currentItems.filter(i => i.tengo).length;
-  await addDoc(collection(db, snapshotsPath(currentCollectionId)), {
-    total, tengo, timestamp: serverTimestamp()
-  });
-  showToast('Snapshot guardado');
+async function saveSnapshot(toast){
+  const st = calcStats(currentItems);
+  await addDoc(collection(db, snapshotsPath(currentCollectionId)), { ...st, timestamp: serverTimestamp() });
+  if (toast) showToast('Snapshot guardado en el historial');
+}
+window.saveSnapshot = saveSnapshot;
+document.getElementById('btn-snapshot').onclick = () => {
   document.getElementById('report-filtro-count').textContent = `${lastFilteredItems.length} de ${currentItems.length}`;
   document.getElementById('report-solo-filtrado').checked = false;
   openModal('modal-report-format');
@@ -1095,6 +1288,7 @@ function generateReport(modo){
   const valorField = findFieldByHints(fields, ['denominacion', 'denominación', 'valor', 'motivo']);
   const cecaField = findFieldByHints(fields, ['ceca']);
   const soloFiltrado = document.getElementById('report-solo-filtrado').checked;
+  if (document.getElementById('report-save-snap').checked) saveSnapshot(false);
   const baseItems = soloFiltrado ? lastFilteredItems : currentItems;
 
   if (modo === 'checklist') renderChecklistReport(baseItems, paisField, anoField, valorField, cecaField);
@@ -1264,32 +1458,109 @@ document.getElementById('btn-history').onclick = async () => {
    AJUSTES DE COLECCIÓN
    ========================================================================= */
 document.getElementById('btn-collection-settings').onclick = () => {
-  document.getElementById('set-name').value = currentCollectionMeta.name;
-  document.getElementById('set-icon').value = currentCollectionMeta.icon || '';
+  $('set-name').value = currentCollectionMeta.name; $('set-icon').value = currentCollectionMeta.icon || '';
+  const chk = currentCollectionMeta.type === 'checklist';
+  $('act-update').style.display = chk ? '' : 'none';
   openModal('modal-settings');
 };
 async function saveCollectionSettings(){
-  await updateDoc(doc(db, colPath(), currentCollectionId), {
-    name: document.getElementById('set-name').value,
-    icon: document.getElementById('set-icon').value
-  });
-  closeModal('modal-settings');
-  showToast('Colección actualizada');
+  await updateDoc(doc(db, colPath(), currentCollectionId), { name: $('set-name').value, icon: $('set-icon').value });
+  closeModal('modal-settings'); showToast('Colección actualizada');
 }
 async function deleteCurrentCollection(){
-  if (!confirm('Esto borrará la colección y TODOS sus elementos. ¿Seguro?')) return;
-  const itemsSnap = await getDocs(collection(db, itemsPath(currentCollectionId)));
-  const batch = writeBatch(db);
-  itemsSnap.docs.forEach(d => batch.delete(d.ref));
-  await batch.commit();
-  await deleteDoc(doc(db, colPath(), currentCollectionId));
-  closeModal('modal-settings');
-  navList();
-  showToast('Colección eliminada');
+  if (!confirm('Esto borrará la colección y TODOS sus elementos, fotos e historial. ¿Seguro?')) return;
+  const cid = currentCollectionId; closeModal('modal-settings');
+  try {
+    progress('Eliminando colección...', 0, 1);
+    if (unsubItems) { unsubItems(); unsubItems = null; }
+    const ops = [];
+    for (const p of [itemsPath(cid), photosPath(cid), snapshotsPath(cid)]) (await getDocs(collection(db, p))).docs.forEach(d => ops.push(['delete', d.ref]));
+    await commitOps(ops, 'Eliminando colección...');
+    await deleteDoc(doc(db, colPath(), cid));
+    currentCollectionId = null; navList(); showToast('Colección eliminada');
+  } finally { endProgress(); }
 }
 window.saveCollectionSettings = saveCollectionSettings;
 window.deleteCurrentCollection = deleteCurrentCollection;
 
+$('act-fields').onclick = () => {
+  closeModal('modal-settings'); fieldsCtx = 'edit';
+  fieldsDraft = (currentCollectionMeta.fields || []).map(f => ({ ...f }));
+  $('fields-title').textContent = 'Campos de «' + currentCollectionMeta.name + '»';
+  $('fields-help').textContent = 'Renombra, reordena, cambia el tipo o quita campos. Los datos ya guardados no se pierden: si quitas un campo y luego lo vuelves a crear con el mismo nombre, sus datos reaparecen.';
+  $('fields-presets').style.display = 'none'; $('btn-fields-ok').textContent = 'Guardar campos';
+  renderFieldsEditor(); openModal('modal-libre-fields');
+};
+$('act-update').onclick = () => { closeModal('modal-settings'); openImport('update'); };
+$('act-stats').onclick = async () => { await syncStats(true); closeModal('modal-settings'); showToast('Contadores recalculados'); };
+
+function download(name, content, type){
+  const url = URL.createObjectURL(new Blob([content], { type: type || 'application/octet-stream' }));
+  const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+function collectionRows(){
+  const fields = currentCollectionMeta.fields || [];
+  return currentItems.map(i => { const o = { codigo: i.codigo || '', nombre: i.nombre || '' }; fields.forEach(f => o[f.label] = i.campos?.[f.key] ?? ''); o.tengo = i.tengo ? 1 : ''; o.repe = i.repetido ? 1 : ''; o.notas = i.notas || ''; return o; });
+}
+$('act-csv').onclick = () => {
+  const rows = collectionRows(); if (!rows.length) { showToast('No hay elementos'); return; }
+  const cols = Object.keys(rows[0]), q = v => /[;"\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : String(v);
+  download(slugify(currentCollectionMeta.name) + '.csv', '\uFEFF' + [cols.join(';'), ...rows.map(r => cols.map(c => q(r[c])).join(';'))].join('\r\n'), 'text/csv;charset=utf-8');
+};
+$('act-xlsx').onclick = async () => {
+  const rows = collectionRows(); if (!rows.length) { showToast('No hay elementos'); return; }
+  try { await ensureSheetJs(); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Colección'); XLSX.writeFile(wb, slugify(currentCollectionMeta.name) + '.xlsx'); }
+  catch (e) { showToast('No se pudo generar el Excel; usa la opción CSV.'); }
+};
+
+/* =========================================================================
+   COPIA DE SEGURIDAD
+   ========================================================================= */
+$('btn-backup').onclick = () => openModal('modal-backup');
+const tsReplacer = (k, v) => v && typeof v.toMillis === 'function' ? { __ts: v.toMillis() } : v && typeof v.toDate === 'function' ? { __ts: +v.toDate() } : v;
+const tsReviver = (k, v) => v && typeof v === 'object' && '__ts' in v ? Timestamp.fromMillis(v.__ts) : v;
+$('btn-export-all').onclick = async () => {
+  try {
+    const out = { app: 'mis-colecciones', version: 2, exportedAt: new Date().toISOString(), collections: [] };
+    for (let n = 0; n < collectionsCache.length; n++) {
+      const c = collectionsCache[n]; progress('Leyendo «' + c.name + '»...', n, collectionsCache.length);
+      const rd = async p => (await getDocs(collection(db, p))).docs.map(d => ({ id: d.id, ...d.data() }));
+      const { id, ...meta } = c;
+      out.collections.push({ id, meta, items: (await rd(itemsPath(id))).map(({ _s, ...x }) => x), photos: await rd(photosPath(id)), snapshots: await rd(snapshotsPath(id)) });
+    }
+    download('mis-colecciones-copia-' + new Date().toISOString().slice(0, 10) + '.json', JSON.stringify(out, tsReplacer), 'application/json');
+    showToast('Copia descargada');
+  } finally { endProgress(); }
+};
+$('restore-file').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return; e.target.value = '';
+  let data; try { data = JSON.parse(await f.text(), tsReviver); } catch (err) { showToast('El archivo no es una copia válida'); return; }
+  if (data.app !== 'mis-colecciones' || !Array.isArray(data.collections)) { showToast('El archivo no es una copia de Mis Colecciones'); return; }
+  const nItems = data.collections.reduce((s, c) => s + c.items.length, 0);
+  if (!confirm(`La copia contiene ${data.collections.length} colecciones y ${nItems} elementos. ¿Restaurar?`)) return;
+  try {
+    const existing = new Set(collectionsCache.map(c => c.id)), ops = [];
+    data.collections.forEach(c => {
+      const cid = existing.has(c.id) ? doc(collection(db, colPath())).id : c.id;
+      const meta = { ...c.meta, name: existing.has(c.id) ? c.meta.name + ' (restaurada)' : c.meta.name };
+      ops.push(['set', doc(db, colPath(), cid), meta]);
+      c.items.forEach(({ id, ...x }) => ops.push(['set', doc(db, itemsPath(cid), id), x]));
+      c.photos.forEach(({ id, ...x }) => ops.push(['set', doc(db, photosPath(cid), id), x]));
+      c.snapshots.forEach(({ id, ...x }) => ops.push(['set', doc(db, snapshotsPath(cid), id), x]));
+    });
+    progress('Restaurando...', 0, ops.length); await commitOps(ops, 'Restaurando...');
+    closeModal('modal-backup'); showToast('Copia restaurada');
+  } finally { endProgress(); }
+});
+
+/* ===== Cierre con Esc / clic fuera, y avisos de error legibles ===== */
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { $('lightbox').classList.remove('open'); if (!busy) document.querySelectorAll('.backdrop.open').forEach(b => b.classList.remove('open')); } });
+document.querySelectorAll('.backdrop').forEach(b => b.addEventListener('mousedown', e => { if (e.target === b && !busy) b.classList.remove('open'); }));
+window.addEventListener('unhandledrejection', e => {
+  const c = e.reason && e.reason.code; endProgress();
+  showToast(c === 'resource-exhausted' ? 'Has alcanzado el límite diario gratuito de Firebase. Inténtalo mañana.' : c === 'permission-denied' ? 'Sin permiso: revisa las reglas de Firestore o vuelve a iniciar sesión.' : 'Error: ' + ((e.reason && e.reason.message) || 'algo ha fallado'));
+});
+document.addEventListener('visibilitychange', () => { if (document.hidden) flushStatsSync(); });
 /* =========================================================================
    UTILIDADES
    ========================================================================= */
