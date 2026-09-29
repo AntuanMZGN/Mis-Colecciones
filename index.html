@@ -275,6 +275,8 @@
         <button class="btn" id="btn-mark-all">✅ Marcar todo</button>
         <button class="btn" id="btn-unmark-all">⬜ Desmarcar todo</button>
         <button class="btn" id="btn-snapshot">📸 Snapshot / Informe</button>
+        <button class="btn" id="btn-summary-report">📐 Resumen por valor</button>
+        <span class="stat" id="summary-counter" style="display:none;cursor:pointer;" onclick="document.getElementById('btn-summary-report').click()"></span>
         <button class="btn" id="btn-gallery">🖼️ Galería</button>
         <button class="btn" id="btn-history">📈 Historial</button>
         <button class="btn" id="btn-collection-settings">⚙️</button>
@@ -853,7 +855,7 @@ let itemsFromServer = false, statsTimer = null, renderTimer = null;
 const searchStr = i => [i.codigo, i.nombre, i.notas, ...Object.values(i.campos || {})].join(' ').toLowerCase();
 const natural = (a, b) => String(a).localeCompare(String(b), 'es', { numeric: true });
 const cmpDefault = (a, b) => (typeof a.orden === 'number' && typeof b.orden === 'number') ? a.orden - b.orden : natural(a.codigo || a.nombre || '', b.codigo || b.nombre || '');
-function scheduleRender(){ clearTimeout(renderTimer); renderTimer = setTimeout(() => { renderDetailStats(); renderFiltersBar(); renderDetailBody(); }, 30); }
+function scheduleRender(){ clearTimeout(renderTimer); renderTimer = setTimeout(() => { renderDetailStats(); renderFiltersBar(); renderDetailBody(); renderSummaryCounter(); }, 30); }
 function listenItems(cid){
   if (unsubItems) unsubItems();
   sortState = { field: null, dir: 'asc' }; filterState = {}; renderLimit = RL0; itemsFromServer = false;
@@ -934,9 +936,9 @@ function renderFiltersBar(){
 function setFilter(key, value){
   renderLimit = RL0;
   if (value) filterState[key] = value; else delete filterState[key];
-  renderDetailBody(); renderFiltersBar();
+  renderDetailBody(); renderFiltersBar(); renderSummaryCounter();
 }
-function clearFilters(){ renderLimit = RL0; filterState = {}; renderDetailBody(); renderFiltersBar(); }
+function clearFilters(){ renderLimit = RL0; filterState = {}; renderDetailBody(); renderFiltersBar(); renderSummaryCounter(); }
 function setSort(field){
   renderLimit = RL0;
   if (sortState.field === field) sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
@@ -1019,7 +1021,7 @@ function renderDetailBody(){
     if (newWrap) newWrap.onscroll = () => { if (items.length > renderLimit && newWrap.scrollTop + newWrap.clientHeight > newWrap.scrollHeight - 400) moreRows(); };
   }
 }
-let searchTimer; document.getElementById('detail-search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { renderLimit = RL0; renderDetailBody(); }, 150); });
+let searchTimer; document.getElementById('detail-search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { renderLimit = RL0; renderDetailBody(); renderSummaryCounter(); }, 150); });
 
 document.getElementById('btn-mark-all').onclick = () => bulkSetTengo(true);
 document.getElementById('btn-unmark-all').onclick = () => bulkSetTengo(false);
@@ -1297,6 +1299,91 @@ function generateReport(modo){
   setTimeout(() => window.print(), 250);
 }
 window.generateReport = generateReport;
+
+/* =========================================================================
+   RESUMEN POR VALOR + PAÍS (colapsando años)
+   Para cada combinación País+Valor: "Tengo" si hay al menos un año marcado,
+   "Falta" solo si NO hay ningún año conseguido. Respeta los filtros activos
+   (país, ceca, búsqueda...) pero el Estado se aplica al resultado ya
+   agrupado, no elemento a elemento — si no, "Falta" nunca tendría sentido
+   (todo lo filtrado por "Me falta" sería, por definición, falta).
+   ========================================================================= */
+function scopedItemsSinEstado(){
+  const search = (document.getElementById('detail-search').value || '').toLowerCase();
+  let items = currentItems;
+  if (search) items = items.filter(i => (i._s || '').includes(search));
+  Object.keys(filterState).forEach(key => {
+    if (key === '__estado') return;
+    items = items.filter(i => String(i.campos?.[key] ?? '') === filterState[key]);
+  });
+  return items;
+}
+function buildValuePaisSummary(){
+  const fields = currentCollectionMeta.fields || [];
+  const paisField = findFieldByHints(fields, ['pais', 'país']);
+  const anoField = findFieldByHints(fields, ['ano', 'año']);
+  const valorField = findFieldByHints(fields, ['denominacion', 'denominación', 'valor', 'motivo']);
+  if (!valorField) return null;
+
+  const groups = new Map();
+  scopedItemsSinEstado().forEach(i => {
+    const pais = paisField ? (i.campos?.[paisField.key] || '—') : '—';
+    const valor = i.campos?.[valorField.key] || i.nombre || '—';
+    const key = pais + '|||' + valor;
+    if (!groups.has(key)) groups.set(key, { pais, valor, anosTengo: [] });
+    if (i.tengo) groups.get(key).anosTengo.push(anoField ? (i.campos?.[anoField.key] || '') : '');
+  });
+  let rows = [...groups.values()].map(g => ({
+    pais: g.pais, valor: g.valor,
+    tengo: g.anosTengo.length > 0,
+    anos: [...new Set(g.anosTengo.filter(Boolean))].sort()
+  }));
+  if (filterState.__estado === 'tengo') rows = rows.filter(r => r.tengo);
+  else if (filterState.__estado === 'falta') rows = rows.filter(r => !r.tengo);
+  rows.sort((a, b) => a.pais.localeCompare(b.pais, 'es') || parseValorNumerico(a.valor) - parseValorNumerico(b.valor));
+  return rows;
+}
+function renderSummaryCounter(){
+  const el = document.getElementById('summary-counter');
+  if (currentCollectionMeta.type !== 'checklist') { el.style.display = 'none'; return; }
+  const rows = buildValuePaisSummary();
+  if (!rows) { el.style.display = 'none'; return; }
+  const faltan = rows.filter(r => !r.tengo).length;
+  el.style.display = '';
+  el.innerHTML = `<b style="color:${faltan ? 'var(--red)' : 'var(--green)'};">${faltan}</b> valores por conseguir`;
+}
+document.getElementById('btn-summary-report').onclick = () => {
+  const rows = buildValuePaisSummary();
+  if (!rows) { showToast('Esta colección no tiene un campo de valor/denominación detectable'); return; }
+  if (!rows.length) { showToast('No hay nada que mostrar con los filtros actuales'); return; }
+  const fecha = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+  const porPais = new Map();
+  rows.forEach(r => { if (!porPais.has(r.pais)) porPais.set(r.pais, []); porPais.get(r.pais).push(r); });
+  const criterio = filterState.__estado === 'tengo' ? 'Solo valores conseguidos (al menos un año)' : filterState.__estado === 'falta' ? 'Solo valores que faltan (ningún año conseguido)' : 'Todos los valores';
+
+  document.getElementById('print-area').innerHTML = `
+    <div class="preport-header">
+      <h1>${escapeHtml(currentCollectionMeta.icon || '')} ${escapeHtml(currentCollectionMeta.name)} — Resumen por valor</h1>
+      <p class="psub">Generado el ${fecha} · ${escapeHtml(criterio)} · agrupado por país y valor (todos los años juntos)</p>
+    </div>
+    <div class="pcountries">
+      ${[...porPais.entries()].map(([pais, rs]) => `
+        <div class="pcountry">
+          <div class="pcountry-title">${escapeHtml(pais)} <span class="pcountry-count">(${rs.filter(r=>!r.tengo).length} faltan de ${rs.length})</span></div>
+          <table class="ptable">
+            <thead><tr><th>T</th><th>Valor</th><th>Año(s) que tienes</th></tr></thead>
+            <tbody>${rs.map(r => `<tr class="${r.tengo ? 'rowok' : 'rowfalta'}">
+              <td class="chk">${r.tengo ? '☑' : '☐'}</td>
+              <td>${escapeHtml(r.valor)}</td>
+              <td class="pcode">${r.anos.length ? escapeHtml(r.anos.join(', ')) : '—'}</td>
+            </tr>`).join('')}</tbody>
+          </table>
+        </div>`).join('')}
+    </div>
+  `;
+  setTimeout(() => window.print(), 250);
+};
+
 
 function itemGroupKey(i, paisField, anoField){
   const p = paisField ? (i.campos?.[paisField.key] || '—') : null;
