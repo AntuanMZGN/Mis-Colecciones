@@ -141,13 +141,13 @@
        Usamos CSS Grid (no column-count) para evitar el hueco en blanco que
        Chrome genera a veces entre la cabecera y el primer bloque al usar
        columnas de tipo "periódico" con contenido que no cabe entero. */
-    #print-area .pcountries{display:grid;grid-template-columns:1fr 1fr;gap:0 12px;align-items:start;}
-    #print-area .pcountry{break-inside:avoid;margin-bottom:12px;border:1.5px solid #333;border-radius:4px;overflow:hidden;}
+    #print-area .pcountries{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-flow:dense;gap:0 10px;align-items:start;}
+    #print-area .pcountry{break-inside:avoid;margin-bottom:10px;border:1.5px solid #333;border-radius:4px;overflow:hidden;}
     #print-area .pcountry-title{background:#2b2320;color:#fff;font-size:12px;font-weight:bold;padding:4px 7px;}
     #print-area .pcountry-title .pcountry-count{font-weight:normal;color:#c9a227;font-size:10px;}
-    #print-area .pcountry-inner{display:grid;grid-template-columns:1fr 1fr;gap:0 8px;padding:4px;align-items:start;}
+    #print-area .pcountry-inner{display:grid;gap:0 8px;padding:4px;align-items:start;}
     #print-area .pgroup{break-inside:avoid;margin-bottom:6px;}
-    #print-area .pgroup-title{background:#eee2c6;font-size:8px;font-weight:bold;padding:1.5px 5px;color:#333;}
+    #print-area .pgroup-title{background:#55483a;color:#fff;font-size:8px;font-weight:bold;padding:2px 5px;letter-spacing:.02em;}
     #print-area table.ptable{width:100%;border-collapse:collapse;font-size:8.5px;}
     #print-area table.ptable th{background:#f2f2f2;text-align:left;padding:1.5px 4px;font-size:7px;text-transform:uppercase;color:#555;border-bottom:1px solid #ccc;}
     #print-area table.ptable td{padding:1.5px 4px;border-top:1px solid #eee;}
@@ -1436,10 +1436,26 @@ function renderGroupedReport(baseItems, paisField, anoField, valorField, cecaFie
     </tr>`;
   }).join('');
 
-  const paisBlockHtml = (pg) => `
-    <div class="pcountry">
+  // Tamaño dinámico: los países con más monedas ocupan más "hueco" en la
+  // cuadrícula (grid-column: span N sobre una base de 4 columnas), y por
+  // dentro usan más columnas para aprovechar ese espacio extra. Los países
+  // con pocos datos (ej. Ciudad del Vaticano) quedan compactos.
+  const spanForPais = (pg) => {
+    const n = pg.totalItems;
+    if (n <= 4) return 1;
+    if (n <= 12) return 2;
+    if (n <= 30) return 3;
+    return 4;
+  };
+  const innerColsForSpan = (span) => span >= 3 ? 3 : span;
+
+  const paisBlockHtml = (pg) => {
+    const span = spanForPais(pg);
+    const innerCols = innerColsForSpan(span);
+    return `
+    <div class="pcountry" style="grid-column:span ${span};">
       <div class="pcountry-title">${escapeHtml(pg.pais)} <span class="pcountry-count">(${pg.totalItems})</span></div>
-      <div class="pcountry-inner">
+      <div class="pcountry-inner" style="grid-template-columns:repeat(${innerCols},1fr);">
         ${pg.subgrupos.map(sg => `
           <div class="pgroup">
             ${sg.ano ? `<div class="pgroup-title">${escapeHtml(String(sg.ano))}</div>` : ''}
@@ -1450,6 +1466,7 @@ function renderGroupedReport(baseItems, paisField, anoField, valorField, cecaFie
           </div>`).join('')}
       </div>
     </div>`;
+  };
 
   document.getElementById('print-area').innerHTML = `
     <div class="preport-header">
