@@ -267,7 +267,10 @@
     <div id="view-detail" style="display:none;">
       <div class="detail-header-row">
         <h2 id="detail-title" style="font-size:1.3rem;color:var(--brass);"></h2>
-        <div id="detail-stats" class="stats-inline"></div>
+        <div class="stats-inline" style="align-items:center;">
+          <div id="detail-stats" class="stats-inline"></div>
+          <div class="stat" id="valor-total-stat" style="display:none;"></div>
+        </div>
       </div>
       <div class="toolbar">
         <input class="searchbar" id="detail-search" placeholder="Buscar...">
@@ -855,7 +858,7 @@ let itemsFromServer = false, statsTimer = null, renderTimer = null;
 const searchStr = i => [i.codigo, i.nombre, i.notas, ...Object.values(i.campos || {})].join(' ').toLowerCase();
 const natural = (a, b) => String(a).localeCompare(String(b), 'es', { numeric: true });
 const cmpDefault = (a, b) => (typeof a.orden === 'number' && typeof b.orden === 'number') ? a.orden - b.orden : natural(a.codigo || a.nombre || '', b.codigo || b.nombre || '');
-function scheduleRender(){ clearTimeout(renderTimer); renderTimer = setTimeout(() => { renderDetailStats(); renderFiltersBar(); renderDetailBody(); renderSummaryCounter(); }, 30); }
+function scheduleRender(){ clearTimeout(renderTimer); renderTimer = setTimeout(() => { renderDetailStats(); renderFiltersBar(); renderDetailBody(); renderSummaryCounter(); renderValorTotal(); }, 30); }
 function listenItems(cid){
   if (unsubItems) unsubItems();
   sortState = { field: null, dir: 'asc' }; filterState = {}; renderLimit = RL0; itemsFromServer = false;
@@ -905,6 +908,30 @@ function getFieldValue(item, fieldKey){
   return item.campos?.[fieldKey] ?? '';
 }
 
+// Suma el valor facial de las monedas que tienes (según el filtro activo),
+// contando también las copias repetidas (campo "número") cuando la moneda
+// está marcada como repetida.
+function renderValorTotal(){
+  const el = document.getElementById('valor-total-stat');
+  if (!el) return;
+  if (currentCollectionMeta.type !== 'checklist') { el.style.display = 'none'; return; }
+  const fields = currentCollectionMeta.fields || [];
+  const valorField = findFieldByHints(fields, ['valor', 'denominacion', 'denominación', 'motivo']);
+  if (!valorField) { el.style.display = 'none'; return; }
+  const cantidadField = findFieldByHints(fields, ['numero', 'número', 'cantidad']);
+  let total = 0;
+  lastFilteredItems.forEach(i => {
+    if (!i.tengo) return;
+    const valor = parseValorNumerico(i.campos?.[valorField.key]);
+    const extra = (cantidadField && i.repetido) ? (parseInt(i.campos?.[cantidadField.key], 10) || 0) : 0;
+    total += valor * (1 + extra);
+  });
+  const formatted = total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
+  el.style.display = '';
+  el.innerHTML = `<b style="color:var(--brass);">${formatted}</b>valor total`;
+}
+window.renderValorTotal = renderValorTotal;
+
 function renderFiltersBar(){
   const box = document.getElementById('detail-filters');
   if (currentCollectionMeta.type !== 'checklist') { box.innerHTML = ''; return; }
@@ -936,9 +963,9 @@ function renderFiltersBar(){
 function setFilter(key, value){
   renderLimit = RL0;
   if (value) filterState[key] = value; else delete filterState[key];
-  renderDetailBody(); renderFiltersBar(); renderSummaryCounter();
+  renderDetailBody(); renderFiltersBar(); renderSummaryCounter(); renderValorTotal();
 }
-function clearFilters(){ renderLimit = RL0; filterState = {}; renderDetailBody(); renderFiltersBar(); renderSummaryCounter(); }
+function clearFilters(){ renderLimit = RL0; filterState = {}; renderDetailBody(); renderFiltersBar(); renderSummaryCounter(); renderValorTotal(); }
 function setSort(field){
   renderLimit = RL0;
   if (sortState.field === field) sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
@@ -1021,7 +1048,7 @@ function renderDetailBody(){
     if (newWrap) newWrap.onscroll = () => { if (items.length > renderLimit && newWrap.scrollTop + newWrap.clientHeight > newWrap.scrollHeight - 400) moreRows(); };
   }
 }
-let searchTimer; document.getElementById('detail-search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { renderLimit = RL0; renderDetailBody(); renderSummaryCounter(); }, 150); });
+let searchTimer; document.getElementById('detail-search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { renderLimit = RL0; renderDetailBody(); renderSummaryCounter(); renderValorTotal(); }, 150); });
 
 document.getElementById('btn-mark-all').onclick = () => bulkSetTengo(true);
 document.getElementById('btn-unmark-all').onclick = () => bulkSetTengo(false);
