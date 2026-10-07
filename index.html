@@ -960,7 +960,7 @@ function renderValorTotal(){
   if (!el) return;
   if (currentCollectionMeta.type !== 'checklist') { el.style.display = 'none'; return; }
   const fields = currentCollectionMeta.fields || [];
-  const valorField = findFieldByHints(fields, ['valor', 'denominacion', 'denominación', 'motivo']);
+  const valorField = findFieldByHints(fields, ['valor', 'denominacion', 'denominación']);
   const valorFijo = typeof currentCollectionMeta.valorFijo === 'number' ? currentCollectionMeta.valorFijo : null;
   if (!valorField && !valorFijo) { el.style.display = 'none'; return; }
   // Campo opcional que indica cuántas copias adicionales repetidas hay de un
@@ -1382,9 +1382,13 @@ function findFieldByHints(fields, hints){
 function parseValorNumerico(str){
   if (!str) return 0;
   const s = String(str).toLowerCase().replace(',', '.');
-  const m = s.match(/([\d.]+)/);
+  // Busca un número real (al menos un dígito); un punto suelto sin dígitos
+  // alrededor (frecuente en texto libre, p. ej. abreviaturas o el punto final
+  // de una frase) no cuenta, para no devolver nunca NaN con campos de texto.
+  const m = s.match(/(\d+(?:\.\d+)?)/);
   if (!m) return 0;
   const n = parseFloat(m[1]);
+  if (isNaN(n)) return 0;
   return s.includes('c') && !s.includes('€') ? n / 100 : n; // "50 c" -> 0.50 ; "2 €" -> 2
 }
 // La ceca solo aporta información en Alemania (5 casas de moneda); en el resto
@@ -1399,7 +1403,7 @@ function generateReport(modo){
   const fields = currentCollectionMeta.fields || [];
   const paisField = findFieldByHints(fields, ['pais', 'país']);
   const anoField = findFieldByHints(fields, ['ano', 'año']);
-  const valorField = findFieldByHints(fields, ['denominacion', 'denominación', 'valor', 'motivo']);
+  const valorField = findFieldByHints(fields, ['denominacion', 'denominación', 'valor']);
   const cecaField = findFieldByHints(fields, ['ceca']);
   const soloFiltrado = document.getElementById('report-solo-filtrado').checked;
   if (document.getElementById('report-save-snap').checked) saveSnapshot(false);
@@ -1434,7 +1438,7 @@ function buildValuePaisSummary(){
   const fields = currentCollectionMeta.fields || [];
   const paisField = findFieldByHints(fields, ['pais', 'país']);
   const anoField = findFieldByHints(fields, ['ano', 'año']);
-  const valorField = findFieldByHints(fields, ['denominacion', 'denominación', 'valor', 'motivo']);
+  const valorField = findFieldByHints(fields, ['denominacion', 'denominación', 'valor']);
   if (!valorField) return null;
 
   const groups = new Map();
