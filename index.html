@@ -328,7 +328,10 @@
     <div class="chips" id="fields-presets"></div>
     <div id="libre-fields-list" style="margin-top:12px;"></div>
     <button class="btn small" id="btn-add-field">+ Añadir campo</button>
-    <div style="margin-top:18px;text-align:right;"><button class="btn primary" id="btn-fields-ok">Crear colección</button></div>
+    <div style="margin-top:18px;text-align:right;">
+      <button class="btn" id="fields-undo-btn" disabled title="Deshacer el último cambio en este formulario">↩️ Deshacer</button>
+      <button class="btn primary" id="btn-fields-ok">Crear colección</button>
+    </div>
   </div>
 </div>
 
@@ -374,7 +377,10 @@
       <button class="btn" id="act-stats">🔢 Recalcular contadores</button>
       <button class="btn danger" onclick="deleteCurrentCollection()">🗑 Eliminar colección completa</button>
     </div>
-    <div style="text-align:right;"><button class="btn primary" onclick="saveCollectionSettings()">Guardar nombre e icono</button></div>
+    <div style="text-align:right;">
+      <button class="btn" id="settings-undo-btn" disabled title="Deshacer el último cambio en este formulario">↩️ Deshacer</button>
+      <button class="btn primary" onclick="saveCollectionSettings()">Guardar nombre e icono</button>
+    </div>
   </div>
 </div>
 
@@ -405,6 +411,7 @@
     <div id="item-form-extra"></div>
     <div class="field"><label>📷 Foto (opcional)</label><input type="file" accept="image/*" id="item-foto-input"><div id="item-foto-preview" style="margin-top:8px;"></div></div>
     <div style="margin-top:16px;text-align:right;">
+      <button class="btn" id="item-undo-btn" disabled title="Deshacer el último cambio en este formulario">↩️ Deshacer</button>
       <button class="btn primary" onclick="saveItemFromModal()">Guardar</button>
     </div>
   </div>
@@ -555,6 +562,12 @@ function listenCollections(){
     if (!currentCollectionId) renderCollectionsGrid();
     if (currentCollectionId) {
       currentCollectionMeta = collectionsCache.find(c => c.id === currentCollectionId) || currentCollectionMeta;
+      // Si estamos viendo el detalle de esta colección, refleja al momento
+      // cualquier cambio hecho en Ajustes (valor fijo, campos, nombre...)
+      // sin esperar a otra acción que recalcule las estadísticas.
+      if (document.getElementById('view-detail').style.display !== 'none') {
+        renderDetailStats(); renderFiltersBar(); renderSummaryCounter(); renderValorTotal(); renderDetailBody();
+      }
     }
   });
 }
@@ -624,8 +637,18 @@ function renderFieldsEditor(){
 const fbox = document.getElementById('libre-fields-list');
 const setFieldProp = e => { const r = e.target.closest('.frow'); if (r && e.target.dataset.k) fieldsDraft[+r.dataset.i][e.target.dataset.k] = e.target.value; };
 fbox.addEventListener('input', setFieldProp); fbox.addEventListener('change', setFieldProp);
+// Una foto de fieldsDraft justo antes de empezar a editar un campo, para
+// que "Deshacer" pueda restaurarla. Se omite mientras estamos enfocando
+// automáticamente el campo recién creado (ver btn-add-field), para no
+// guardar una "foto" inútil justo después de ese cambio.
+let suppressFieldsUndoFocus = false;
+fbox.addEventListener('focusin', e => {
+  if (suppressFieldsUndoFocus) return;
+  if (e.target.matches('input,select')) fieldsUndoSnapshot();
+});
 fbox.addEventListener('click', e => {
   const b = e.target.closest('[data-a]'); if (!b) return;
+  fieldsUndoSnapshot();
   const i = +b.closest('.frow').dataset.i, a = b.dataset.a;
   if (a === 'del') fieldsDraft.splice(i, 1);
   if (a === 'up' && i > 0) [fieldsDraft[i-1], fieldsDraft[i]] = [fieldsDraft[i], fieldsDraft[i-1]];
@@ -633,12 +656,16 @@ fbox.addEventListener('click', e => {
   renderFieldsEditor();
 });
 document.getElementById('btn-add-field').onclick = () => {
+  fieldsUndoSnapshot();
   fieldsDraft.push({ label: '', type: 'text' }); renderFieldsEditor();
+  suppressFieldsUndoFocus = true;
   const inputs = fbox.querySelectorAll('input[data-k=label]'); inputs[inputs.length - 1].focus();
+  suppressFieldsUndoFocus = false;
 };
 document.getElementById('fields-presets').innerHTML = Object.keys(PRESETS).map(n => `<span class="chip" data-p="${n}">${n}</span>`).join('');
 document.getElementById('fields-presets').addEventListener('click', e => {
   const c = e.target.closest('.chip'); if (!c) return;
+  fieldsUndoSnapshot();
   fieldsDraft = mkFields(PRESETS[c.dataset.p]); renderFieldsEditor();
 });
 
@@ -653,6 +680,7 @@ function selectNewCollectionMode(mode){
     document.getElementById('fields-title').textContent = 'Campos de la ficha';
     document.getElementById('fields-presets').style.display = '';
     document.getElementById('btn-fields-ok').textContent = 'Crear colección';
+    fieldsUndoReset();
     renderFieldsEditor(); openModal('modal-libre-fields');
   } else openImport('new');
 }
@@ -664,10 +692,15 @@ document.getElementById('btn-fields-ok').onclick = async () => {
   if (fieldsCtx === 'new') {
     const pc = window._pendingCollection;
     const ref = await addDoc(collection(db, colPath()), { name: pc.name, icon: pc.icon, type: 'libre', fields, stats: { total: 0, tengo: 0 }, createdAt: serverTimestamp() });
-    closeModal('modal-libre-fields'); showToast('Colección creada'); openCollection(ref.id);
+    closeModal('modal-libre-fields');
+    showToast('Colección creada', async () => { await deleteDoc(doc(db, colPath(), ref.id)); });
+    openCollection(ref.id);
   } else {
-    await updateDoc(doc(db, colPath(), currentCollectionId), { fields });
-    closeModal('modal-libre-fields'); showToast('Campos actualizados');
+    const before = (currentCollectionMeta.fields || []).map(f => ({ ...f }));
+    const cid = currentCollectionId;
+    await updateDoc(doc(db, colPath(), cid), { fields });
+    closeModal('modal-libre-fields');
+    showToast('Campos actualizados', async () => { await updateDoc(doc(db, colPath(), cid), { fields: before }); });
   }
 };
 
@@ -1162,6 +1195,7 @@ function openEditItem(itemId){
   preview.innerHTML = '';
   preview.dataset.eliminar = '';
   if (item?.tieneFoto) loadPhotoIntoPreview(itemId, preview);
+  if (itemFormUndo) itemFormUndo.reset();
   openModal('modal-item');
 }
 window.openEditItem = openEditItem;
@@ -1196,6 +1230,15 @@ async function saveItemFromModal(){
 
   const fotoInput = document.getElementById('item-foto-input');
   const fotoPreview = document.getElementById('item-foto-preview');
+  const wasEditing = !!editingItemId;
+  const beforeItem = wasEditing ? currentItems.find(i => i.id === editingItemId) : null;
+  // Foto del estado anterior (sin contar la foto adjunta, que no se deshace
+  // para no tener que mantener en memoria imágenes completas).
+  const beforeData = beforeItem ? {
+    campos: { ...(beforeItem.campos || {}) },
+    codigo: beforeItem.codigo || '', nombre: beforeItem.nombre || '',
+    notas: beforeItem.notas || '', repetido: !!beforeItem.repetido
+  } : null;
 
   if (editingItemId) {
     await updateDoc(doc(db, itemsPath(currentCollectionId), editingItemId), data);
@@ -1221,7 +1264,21 @@ async function saveItemFromModal(){
   }
 
   closeModal('modal-item');
-  showToast('Guardado');
+  const idForUndo = editingItemId;
+  const tengoForUndo = data.tengo;
+  if (wasEditing) {
+    showToast('Guardado', async () => {
+      await updateDoc(doc(db, itemsPath(currentCollectionId), idForUndo), beforeData);
+    });
+  } else {
+    showToast('Guardado', async () => {
+      await deleteDoc(doc(db, itemsPath(currentCollectionId), idForUndo)).catch(()=>{});
+      await deleteDoc(doc(db, photosPath(currentCollectionId), idForUndo)).catch(()=>{});
+      const dec = { 'stats.total': increment(-1) };
+      if (tengoForUndo) dec['stats.tengo'] = increment(-1);
+      await updateDoc(doc(db, colPath(), currentCollectionId), dec).catch(()=>{});
+    });
+  }
 }
 window.saveItemFromModal = saveItemFromModal;
 
@@ -1622,13 +1679,17 @@ document.getElementById('btn-collection-settings').onclick = () => {
   $('act-update').style.display = chk ? '' : 'none';
   $('set-valor-fijo-wrap').style.display = chk ? '' : 'none';
   $('set-valor-fijo').value = currentCollectionMeta.valorFijo ?? '';
+  if (settingsFormUndo) settingsFormUndo.reset();
   openModal('modal-settings');
 };
 async function saveCollectionSettings(){
+  const before = { name: currentCollectionMeta.name, icon: currentCollectionMeta.icon || '', valorFijo: currentCollectionMeta.valorFijo ?? null };
   const vfRaw = ($('set-valor-fijo').value || '').trim();
   const vf = vfRaw ? parseValorNumerico(vfRaw) : null;
-  await updateDoc(doc(db, colPath(), currentCollectionId), { name: $('set-name').value, icon: $('set-icon').value, valorFijo: vf });
-  closeModal('modal-settings'); showToast('Colección actualizada');
+  const cid = currentCollectionId;
+  await updateDoc(doc(db, colPath(), cid), { name: $('set-name').value, icon: $('set-icon').value, valorFijo: vf });
+  closeModal('modal-settings');
+  showToast('Colección actualizada', async () => { await updateDoc(doc(db, colPath(), cid), before); });
 }
 async function deleteCurrentCollection(){
   if (!confirm('Esto borrará la colección y TODOS sus elementos, fotos e historial. ¿Seguro?')) return;
@@ -1652,6 +1713,7 @@ $('act-fields').onclick = () => {
   $('fields-title').textContent = 'Campos de «' + currentCollectionMeta.name + '»';
   $('fields-help').textContent = 'Renombra, reordena, cambia el tipo o quita campos. Los datos ya guardados no se pierden: si quitas un campo y luego lo vuelves a crear con el mismo nombre, sus datos reaparecen.';
   $('fields-presets').style.display = 'none'; $('btn-fields-ok').textContent = 'Guardar campos';
+  fieldsUndoReset();
   renderFieldsEditor(); openModal('modal-libre-fields');
 };
 $('act-update').onclick = () => { closeModal('modal-settings'); openImport('update'); };
@@ -1732,12 +1794,80 @@ function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 window.openModal = openModal;
 window.closeModal = closeModal;
 
-function showToast(msg){
+function showToast(msg, undoFn){
   const t = document.getElementById('toast');
-  t.textContent = msg; t.style.display = 'block';
   clearTimeout(window._toastTimer);
-  window._toastTimer = setTimeout(() => t.style.display = 'none', 2600);
+  if (undoFn) {
+    t.innerHTML = `${escapeHtml(msg)} <a href="#" id="toast-undo-link" style="color:var(--brass);text-decoration:underline;margin-left:10px;">Deshacer</a>`;
+    document.getElementById('toast-undo-link').onclick = async (e) => {
+      e.preventDefault(); t.style.display = 'none'; clearTimeout(window._toastTimer);
+      try { await undoFn(); showToast('Deshecho'); } catch (err) { showToast('No se pudo deshacer'); }
+    };
+    t.style.display = 'block';
+    window._toastTimer = setTimeout(() => t.style.display = 'none', 7000);
+  } else {
+    t.textContent = msg; t.style.display = 'block';
+    window._toastTimer = setTimeout(() => t.style.display = 'none', 2600);
+  }
 }
+
+/* =========================================================================
+   DESHACER — formularios (cambios aún no guardados dentro de un modal)
+   ========================================================================= */
+// Guarda una "foto" de todos los campos de un formulario cada vez que el
+// usuario entra a editar uno, y permite restaurarla con el botón Deshacer.
+function wireSimpleFormUndo(containerSel, buttonId){
+  const container = document.querySelector(containerSel);
+  const btn = document.getElementById(buttonId);
+  if (!container || !btn) return null;
+  const stack = [];
+  // El campo de foto se excluye: un input de tipo "file" no admite que se le
+  // reasigne un valor por código, así que no participa en este deshacer.
+  function fieldsOf(){ return [...container.querySelectorAll('input,textarea,select')].filter(el => el.id && el.type !== 'file'); }
+  function snapshot(){
+    const s = {};
+    fieldsOf().forEach(el => { s[el.id] = el.type === 'checkbox' ? el.checked : el.value; });
+    return s;
+  }
+  function refreshBtn(){ btn.disabled = stack.length === 0; }
+  container.addEventListener('focusin', (e) => {
+    if (e.target.matches('input,textarea,select') && e.target.type !== 'file') { stack.push(snapshot()); if (stack.length > 30) stack.shift(); refreshBtn(); }
+  });
+  btn.onclick = () => {
+    const prev = stack.pop();
+    if (!prev) return;
+    Object.keys(prev).forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      try { if (el.type === 'checkbox') el.checked = prev[id]; else el.value = prev[id]; } catch (err) {}
+    });
+    refreshBtn();
+  };
+  return { reset(){ stack.length = 0; refreshBtn(); } };
+}
+const itemFormUndo = wireSimpleFormUndo('#modal-item .modal', 'item-undo-btn');
+const settingsFormUndo = wireSimpleFormUndo('#modal-settings .modal', 'settings-undo-btn');
+
+// El editor de campos reconstruye su HTML en cada acción (añadir/quitar/
+// reordenar/preset), así que aquí deshacer restaura una copia completa del
+// array fieldsDraft tal y como estaba justo antes del último cambio.
+let fieldsUndoStack = [];
+function fieldsUndoSnapshot(){
+  fieldsUndoStack.push(JSON.stringify(fieldsDraft));
+  if (fieldsUndoStack.length > 30) fieldsUndoStack.shift();
+  const btn = document.getElementById('fields-undo-btn'); if (btn) btn.disabled = false;
+}
+function fieldsUndoReset(){
+  fieldsUndoStack = [];
+  const btn = document.getElementById('fields-undo-btn'); if (btn) btn.disabled = true;
+}
+document.getElementById('fields-undo-btn').onclick = () => {
+  const prev = fieldsUndoStack.pop();
+  if (prev === undefined) return;
+  fieldsDraft = JSON.parse(prev);
+  renderFieldsEditor();
+  document.getElementById('fields-undo-btn').disabled = fieldsUndoStack.length === 0;
+};
 
 function escapeHtml(str){
   return String(str ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
