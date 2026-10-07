@@ -371,6 +371,7 @@
     </div>
     <div class="actions-list">
       <button class="btn" id="act-fields">🧩 Editar campos (columnas) de la colección</button>
+      <button class="btn" id="act-bulkfill">✏️ Rellenar un campo en todos los elementos</button>
       <button class="btn" id="act-update">🔄 Actualizar desde un archivo (sin perder tus marcas)</button>
       <button class="btn" id="act-csv">⬇️ Exportar a CSV</button>
       <button class="btn" id="act-xlsx">⬇️ Exportar a Excel (.xlsx)</button>
@@ -380,6 +381,21 @@
     <div style="text-align:right;">
       <button class="btn" id="settings-undo-btn" disabled title="Deshacer el último cambio en este formulario">↩️ Deshacer</button>
       <button class="btn primary" onclick="saveCollectionSettings()">Guardar nombre e icono</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rellenar un campo en todos los elementos -->
+<div class="backdrop" id="modal-bulkfill">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-bulkfill')">✕</button>
+    <h2>Rellenar un campo en todos los elementos</h2>
+    <p class="hint">Escribe el mismo valor en un campo para <b>todos</b> los elementos de la colección, tengan o no tengan, estén repetidos o no. Útil, por ejemplo, para poner "2 €" de valor facial en todas las monedas conmemorativas de una vez.</p>
+    <div class="field"><label>Campo a rellenar</label><select id="bf-field"></select></div>
+    <div class="field"><label>Valor que se escribirá en todos</label><input id="bf-value" placeholder="Ej: 2 €"></div>
+    <div id="bf-count" class="hint"></div>
+    <div style="margin-top:14px;text-align:right;">
+      <button class="btn primary" id="bf-apply">Aplicar a todos los elementos</button>
     </div>
   </div>
 </div>
@@ -1722,6 +1738,40 @@ $('act-fields').onclick = () => {
 };
 $('act-update').onclick = () => { closeModal('modal-settings'); openImport('update'); };
 $('act-stats').onclick = async () => { await syncStats(true); closeModal('modal-settings'); showToast('Contadores recalculados'); };
+
+/* =========================================================================
+   RELLENAR UN CAMPO EN TODOS LOS ELEMENTOS (independientemente de
+   Tengo/Repetido/filtros activos — afecta siempre a toda la colección)
+   ========================================================================= */
+$('act-bulkfill').onclick = () => {
+  closeModal('modal-settings');
+  const fields = currentCollectionMeta.fields || [];
+  $('bf-field').innerHTML = fields.map(f => `<option value="${escapeHtml(f.key)}">${escapeHtml(f.label)}</option>`).join('');
+  $('bf-value').value = '';
+  $('bf-count').textContent = `Se aplicará a los ${currentItems.length} elementos de «${currentCollectionMeta.name}».`;
+  openModal('modal-bulkfill');
+};
+$('bf-apply').onclick = async () => {
+  const fields = currentCollectionMeta.fields || [];
+  const field = fields.find(f => f.key === $('bf-field').value);
+  const value = $('bf-value').value;
+  if (!field) { showToast('Elige un campo'); return; }
+  if (!value.trim()) { showToast('Escribe el valor a rellenar'); return; }
+  if (!confirm(`Esto escribirá "${value}" en el campo "${field.label}" de los ${currentItems.length} elementos de la colección, sin importar si están marcados como Tengo, Repetido o cualquier filtro. ¿Continuar?`)) return;
+
+  const cid = currentCollectionId;
+  // Guarda el valor anterior de cada elemento para poder deshacerlo.
+  const before = currentItems.map(i => ({ id: i.id, prev: i.campos?.[field.key] ?? '' }));
+  const ops = currentItems.map(i => ['update', doc(db, itemsPath(cid), i.id), { [`campos.${field.key}`]: value }]);
+  closeModal('modal-bulkfill');
+  try {
+    await commitOps(ops, `Rellenando «${field.label}»...`);
+  } finally { endProgress(); }
+  showToast(`${ops.length} elementos actualizados`, async () => {
+    const undoOps = before.map(b => ['update', doc(db, itemsPath(cid), b.id), { [`campos.${field.key}`]: b.prev }]);
+    try { await commitOps(undoOps, 'Deshaciendo...'); } finally { endProgress(); }
+  });
+};
 
 function download(name, content, type){
   const url = URL.createObjectURL(new Blob([content], { type: type || 'application/octet-stream' }));
