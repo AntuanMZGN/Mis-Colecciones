@@ -98,13 +98,29 @@
   tbody tr:hover td:first-child{background:var(--panel2);}
   input[type=checkbox]{width:18px;height:18px;cursor:pointer;accent-color:var(--brass);}
 
-  /* ---------- Tarjetas libres ---------- */
-  .card-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:14px;}
-  .item-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;}
-  .item-card h4{font-size:.95rem;margin-bottom:6px;}
-  .item-card .row{font-size:.78rem;color:var(--muted);margin-bottom:2px;}
-  .item-card .actions{display:flex;gap:6px;margin-top:10px;}
-  .item-card img.thumb{width:100%;height:120px;object-fit:cover;border-radius:6px;margin-bottom:8px;}
+  /* ---------- Tarjetas libres (ficha moderna) ---------- */
+  .card-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;margin-top:14px;}
+  .item-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .15s,transform .15s;}
+  .item-card:hover{border-color:var(--brass);transform:translateY(-2px);}
+  .item-card .card-photo{height:150px;background:var(--panel2);overflow:hidden;cursor:pointer;}
+  .item-card .card-photo img.thumb{width:100%;height:100%;object-fit:cover;display:block;}
+  .item-card .card-body{padding:14px;display:flex;flex-direction:column;flex:1;}
+  .item-card .card-title{font-size:1rem;font-weight:700;color:var(--text);margin-bottom:2px;}
+  .item-card .card-sub{font-size:.76rem;color:var(--muted);margin-bottom:10px;}
+  .item-card .card-desc{font-size:.78rem;color:var(--muted);line-height:1.45;margin-bottom:10px;padding:8px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .item-card .card-link{font-size:.76rem;color:var(--brass);cursor:pointer;margin-bottom:12px;align-self:flex-start;text-decoration:none;}
+  .item-card .card-link:hover{text-decoration:underline;}
+  .item-card .actions{display:flex;gap:6px;margin-top:auto;padding-top:12px;border-top:1px solid var(--border);}
+  .item-card .actions .btn{flex:1;justify-content:center;}
+
+  /* ---------- Ficha completa (detalle de un elemento libre) ---------- */
+  .ficha-photo{width:100%;max-height:320px;object-fit:cover;border-radius:10px;margin-bottom:16px;display:block;background:var(--panel2);}
+  .ficha-title{font-size:1.25rem;color:var(--brass);margin-bottom:2px;}
+  .ficha-sub{font-size:.85rem;color:var(--muted);margin-bottom:18px;}
+  .ficha-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px 18px;margin-bottom:18px;}
+  .ficha-grid .fitem b{display:block;font-size:.66rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:3px;}
+  .ficha-grid .fitem span{font-size:.9rem;color:var(--text);white-space:pre-line;}
+  .ficha-actions{display:flex;gap:8px;border-top:1px solid var(--border);padding-top:16px;}
 
   /* ---------- Modal ---------- */
   .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:16px;}
@@ -414,6 +430,12 @@
 <div class="backdrop" id="modal-gallery">
   <div class="modal wide"><button class="modal-close" onclick="closeModal('modal-gallery')">✕</button>
     <h2>Galería de fotos</h2><div id="gallery-body" class="gallery"></div></div>
+</div>
+
+<!-- Ficha completa de un elemento (colecciones de ficha libre) -->
+<div class="backdrop" id="modal-ficha">
+  <div class="modal wide"><button class="modal-close" onclick="closeModal('modal-ficha')">✕</button>
+    <div id="ficha-body"></div></div>
 </div>
 <div id="lightbox" onclick="this.classList.remove('open')"><img id="lb-img" alt=""><p id="lb-cap"></p></div>
 <div id="progress"><div class="box"><div id="pg-title">Trabajando...</div><div class="pb"><div id="pg-bar"></div></div><div id="pg-txt" class="hint"></div></div></div>
@@ -995,10 +1017,46 @@ function renderValorTotal(){
 }
 window.renderValorTotal = renderValorTotal;
 
+// Campos típicos que buscamos por nombre/etiqueta para el filtro y el orden
+// de las tarjetas de ficha libre (país/emisor, año, valor facial).
+function libreSortableFields(fields){
+  const pais = findFieldByHints(fields, ['pais', 'país', 'emisor']);
+  const ano = findFieldByHints(fields, ['ano', 'año', 'acunacion', 'acuñacion', 'fecha']);
+  const valor = findFieldByHints(fields, ['valor', 'denominacion', 'denominación']);
+  return { pais, ano, valor };
+}
+
 function renderFiltersBar(){
   const box = document.getElementById('detail-filters');
-  if (currentCollectionMeta.type !== 'checklist') { box.innerHTML = ''; return; }
   const fields = currentCollectionMeta.fields || [];
+
+  if (currentCollectionMeta.type === 'libre') {
+    const { pais, ano, valor } = libreSortableFields(fields);
+    let html = '';
+    if (pais) {
+      const values = [...new Set(currentItems.map(i => i.campos?.[pais.key]).filter(v => v !== undefined && v !== ''))].sort();
+      if (values.length > 1) {
+        const active = filterState[pais.key] ? 'active' : '';
+        html += `<select class="filter-select ${active}" onchange="setFilter('${pais.key}', this.value)">
+          <option value="">${escapeHtml(pais.label)}: todos</option>
+          ${values.map(v => `<option value="${escapeHtml(v)}" ${filterState[pais.key]===v?'selected':''}>${escapeHtml(v)}</option>`).join('')}
+        </select>`;
+      }
+    }
+    const sortOptions = [pais, ano, valor].filter(Boolean);
+    if (sortOptions.length) {
+      html += `<select class="filter-select" onchange="if(this.value) setSort(this.value);">
+        <option value="">Ordenar por...</option>
+        ${sortOptions.map(f => `<option value="${f.key}" ${sortState.field===f.key?'selected':''}>${escapeHtml(f.label)}${sortState.field===f.key?(sortState.dir==='asc'?' ▲':' ▼'):''}</option>`).join('')}
+      </select>`;
+      if (sortState.field) html += `<button class="btn small" onclick="setSort('${sortState.field}')" title="Invertir el orden">⇅ Invertir orden</button>`;
+    }
+    if (Object.keys(filterState).length) html += `<button class="btn small" onclick="clearFilters()">✕ Quitar filtros</button>`;
+    box.innerHTML = html;
+    return;
+  }
+
+  if (currentCollectionMeta.type !== 'checklist') { box.innerHTML = ''; return; }
   // Solo ofrecemos filtro en campos con un numero razonable de valores distintos (<=60)
   let html = '';
   fields.forEach(f => {
@@ -1137,19 +1195,78 @@ async function bulkSetTengo(value){
 }
 window.bulkSetTengo = bulkSetTengo;
 
+// Localiza los campos "destacados" de una ficha (nombre de la pieza, valor
+// facial, descripción de la cara/anverso) a partir de pistas de nombre, para
+// montar una tarjeta de resumen legible sin depender de un orden fijo de
+// columnas. Si la colección no tiene esos campos, se degrada con elegancia a
+// los datos que sí existan (primer campo + nombre del elemento).
+function libreCardFields(fields){
+  const { pais, ano, valor } = libreSortableFields(fields);
+  const nombre = findFieldByHints(fields, ['nombre_moneda', 'nombre moneda', 'nombre']);
+  const desc = findFieldByHints(fields, ['descripcion_cara', 'descripción cara', 'desc_cara', 'anverso', 'cara'])
+    || findFieldByHints(fields, ['descripcion', 'descripción']);
+  return { pais, ano, valor, nombre, desc };
+}
+
 function renderLibreCard(i){
   const fields = currentCollectionMeta.fields || [];
+  const { pais, ano, valor, nombre, desc } = libreCardFields(fields);
+
+  const tituloParts = [valor, nombre].filter(Boolean).map(f => i.campos?.[f.key]).filter(Boolean);
+  const titulo = tituloParts.length ? tituloParts.join(' — ') : (i.campos?.[fields[0]?.key] || i.nombre || 'Elemento');
+  const subParts = [ano, pais].filter(Boolean).map(f => i.campos?.[f.key]).filter(Boolean);
+  const descTexto = desc ? i.campos?.[desc.key] : '';
+
   return `
     <div class="item-card">
-      ${i.tieneFoto ? `<img class="thumb" id="thumb-${i.id}" onclick="viewPhoto('${i.id}')">` : ''}
-      <h4>${escapeHtml(i.campos?.[fields[0]?.key] || i.nombre || 'Elemento')}</h4>
-      ${fields.slice(1).map(f => i.campos?.[f.key] ? `<div class="row"><b>${escapeHtml(f.label)}:</b> ${escapeHtml(i.campos[f.key])}</div>` : '').join('')}
-      <div class="actions">
-        <button class="btn small" onclick="openEditItem('${i.id}')">Editar</button>
-        <button class="btn small danger" onclick="deleteItem('${i.id}')">Borrar</button>
+      ${i.tieneFoto ? `<div class="card-photo" onclick="viewPhoto('${i.id}')"><img class="thumb" id="thumb-${i.id}"></div>` : ''}
+      <div class="card-body">
+        <div class="card-title">${escapeHtml(titulo)}</div>
+        ${subParts.length ? `<div class="card-sub">${subParts.map(v => escapeHtml(v)).join(' · ')}</div>` : ''}
+        ${descTexto ? `<div class="card-desc">${escapeHtml(descTexto)}</div>` : ''}
+        <a class="card-link" href="#" onclick="openFichaDetail('${i.id}');return false;">Ver ficha completa →</a>
+        <div class="actions">
+          <button class="btn small" onclick="openEditItem('${i.id}')">✏️ Editar</button>
+          <button class="btn small danger" onclick="deleteItem('${i.id}')">🗑 Borrar</button>
+        </div>
       </div>
     </div>`;
 }
+
+// Vista de "ficha completa": muestra todos los campos de un elemento de una
+// colección de ficha libre, con la foto grande y botones de editar/eliminar.
+async function openFichaDetail(itemId){
+  const item = currentItems.find(i => i.id === itemId);
+  if (!item) return;
+  const fields = currentCollectionMeta.fields || [];
+  const { pais, ano, valor, nombre } = libreCardFields(fields);
+
+  const tituloParts = [valor, nombre].filter(Boolean).map(f => item.campos?.[f.key]).filter(Boolean);
+  const titulo = tituloParts.length ? tituloParts.join(' — ') : (item.campos?.[fields[0]?.key] || item.nombre || 'Ficha');
+  const subParts = [ano, pais].filter(Boolean).map(f => item.campos?.[f.key]).filter(Boolean);
+  const usedKeys = new Set([pais, ano, valor, nombre].filter(Boolean).map(f => f.key));
+  const restFields = fields.filter(f => !usedKeys.has(f.key) && item.campos?.[f.key]);
+
+  document.getElementById('ficha-body').innerHTML = `
+    ${item.tieneFoto ? `<img class="ficha-photo" id="ficha-photo-${item.id}" alt="">` : ''}
+    <h2 class="ficha-title">${escapeHtml(titulo)}</h2>
+    ${subParts.length ? `<div class="ficha-sub">${subParts.map(v => escapeHtml(v)).join(' · ')}</div>` : ''}
+    <div class="ficha-grid">
+      ${restFields.map(f => `<div class="fitem"><b>${escapeHtml(f.label)}</b><span>${escapeHtml(item.campos[f.key])}</span></div>`).join('')}
+      ${item.notas ? `<div class="fitem" style="grid-column:1/-1;"><b>Notas</b><span>${escapeHtml(item.notas)}</span></div>` : ''}
+    </div>
+    <div class="ficha-actions">
+      <button class="btn" onclick="closeModal('modal-ficha');openEditItem('${item.id}')">✏️ Editar</button>
+      <button class="btn danger" onclick="closeModal('modal-ficha');deleteItem('${item.id}')">🗑 Eliminar</button>
+    </div>`;
+  openModal('modal-ficha');
+  if (item.tieneFoto) {
+    const snap = await getDoc(doc(db, photosPath(currentCollectionId), itemId)).catch(() => null);
+    const img = document.getElementById(`ficha-photo-${item.id}`);
+    if (img && snap?.exists()) img.src = snap.data().data;
+  }
+}
+window.openFichaDetail = openFichaDetail;
 
 /* toggles */
 async function toggleTengo(itemId, val){
