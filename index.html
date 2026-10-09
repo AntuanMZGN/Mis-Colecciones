@@ -122,6 +122,23 @@
   .ficha-grid .fitem span{font-size:.9rem;color:var(--text);white-space:pre-line;}
   .ficha-actions{display:flex;gap:8px;border-top:1px solid var(--border);padding-top:16px;}
 
+  /* ---------- Análisis (distribución por país/emisor + mapa) ---------- */
+  .an-stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
+  .an-stats .stat{flex:1;min-width:110px;}
+  .an-cols{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start;}
+  .an-list{max-height:420px;overflow-y:auto;padding-right:4px;}
+  .an-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:.82rem;}
+  .an-row .an-name{flex:0 0 130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .an-row .an-count{flex:none;width:30px;text-align:right;color:var(--brass);font-weight:600;}
+  .an-row .an-bar-bg{flex:1;height:8px;background:var(--panel2);border-radius:4px;overflow:hidden;}
+  .an-row .an-bar-bg>div{height:100%;background:linear-gradient(90deg,var(--copper),var(--brass));}
+  #an-map-wrap{width:100%;}
+  #an-map{width:100%;height:auto;display:block;background:var(--panel2);border:1px solid var(--border);border-radius:10px;}
+  #an-map path{fill:var(--panel);stroke:var(--ink);stroke-width:.4;cursor:default;}
+  #an-map path.has-coin{fill:var(--brass);}
+  #an-map path:hover{stroke:var(--text);}
+  @media (max-width:680px){ .an-cols{grid-template-columns:1fr;} }
+
   /* ---------- Modal ---------- */
   .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:16px;}
   .backdrop.open{display:flex;}
@@ -302,6 +319,7 @@
         <button class="btn" id="btn-summary-report">📐 Resumen por valor</button>
         <span class="stat" id="summary-counter" style="display:none;cursor:pointer;" onclick="document.getElementById('btn-summary-report').click()"></span>
         <button class="btn" id="btn-gallery">🖼️ Galería</button>
+        <button class="btn" id="btn-analysis">📊 Análisis</button>
         <button class="btn" id="btn-history">📈 Historial</button>
         <button class="btn" id="btn-collection-settings">⚙️</button>
       </div>
@@ -436,6 +454,13 @@
 <div class="backdrop" id="modal-ficha">
   <div class="modal wide"><button class="modal-close" onclick="closeModal('modal-ficha')">✕</button>
     <div id="ficha-body"></div></div>
+</div>
+
+<!-- Análisis: distribución por país/emisor + mapa -->
+<div class="backdrop" id="modal-analysis">
+  <div class="modal wide"><button class="modal-close" onclick="closeModal('modal-analysis')">✕</button>
+    <h2>📊 Análisis de la colección</h2>
+    <div id="analysis-body"><p class="hint">Cargando...</p></div></div>
 </div>
 <div id="lightbox" onclick="this.classList.remove('open')"><img id="lb-img" alt=""><p id="lb-cap"></p></div>
 <div id="progress"><div class="box"><div id="pg-title">Trabajando...</div><div class="pb"><div id="pg-bar"></div></div><div id="pg-txt" class="hint"></div></div></div>
@@ -1479,6 +1504,172 @@ $('btn-gallery').onclick = async () => {
     return `<figure data-cap="${escapeHtml(cap)}"><img src="${d.data().data}" alt=""><figcaption>${escapeHtml(cap)}</figcaption></figure>`; }).join('');
 };
 $('gallery-body').addEventListener('click', e => { const f = e.target.closest('figure'); if (f) showLightbox(f.querySelector('img').src, f.dataset.cap); });
+
+/* =========================================================================
+   ANÁLISIS: distribución por país/emisor + mapa mundial
+   ========================================================================= */
+// Diccionario de nombres de país en español (sin acentos, minúsculas) ->
+// código numérico ISO 3166-1, que es el mismo identificador ("id") que usan
+// los países en el topojson de world-atlas. Cubre los países más habituales
+// en colecciones de monedas; si un país no está aquí simplemente no se podrá
+// pintar en el mapa (pero sí aparecerá en el listado).
+const COUNTRY_ES_TO_ISO = {
+  'espana':'724','francia':'250','alemania':'276','italia':'380','portugal':'620',
+  'austria':'40','belgica':'56','paises bajos':'528','holanda':'528','luxemburgo':'442',
+  'suiza':'756','reino unido':'826','gran bretana':'826','inglaterra':'826','irlanda':'372',
+  'dinamarca':'208','suecia':'752','noruega':'578','finlandia':'246','islandia':'352',
+  'polonia':'616','republica checa':'203','chequia':'203','eslovaquia':'703','hungria':'348',
+  'rumania':'642','bulgaria':'100','grecia':'300','croacia':'191','eslovenia':'705',
+  'serbia':'688','bosnia y herzegovina':'70','bosnia':'70','montenegro':'499',
+  'macedonia del norte':'807','macedonia':'807','albania':'8','moldavia':'498',
+  'ucrania':'804','bielorrusia':'112','rusia':'643','estonia':'233','letonia':'428',
+  'lituania':'440','andorra':'20','monaco':'492','san marino':'674','vaticano':'336',
+  'liechtenstein':'438','malta':'470','chipre':'196','turquia':'792','georgia':'268',
+  'armenia':'51','azerbaiyan':'31',
+  'estados unidos':'840','eeuu':'840','ee uu':'840','usa':'840','canada':'124',
+  'mexico':'484','guatemala':'320','belice':'84','honduras':'340','el salvador':'222',
+  'nicaragua':'558','costa rica':'188','panama':'591','cuba':'192','jamaica':'388',
+  'haiti':'332','republica dominicana':'214','bahamas':'44','trinidad y tobago':'780',
+  'colombia':'170','venezuela':'862','ecuador':'218','peru':'604','bolivia':'68',
+  'chile':'152','argentina':'32','uruguay':'858','paraguay':'600','brasil':'76',
+  'guyana':'328','surinam':'740',
+  'china':'156','japon':'392','corea del sur':'410','corea del norte':'408',
+  'india':'356','pakistan':'586','bangladesh':'50','sri lanka':'144','nepal':'524',
+  'tailandia':'764','vietnam':'704','filipinas':'608','indonesia':'360','malasia':'458',
+  'singapur':'702','birmania':'104','myanmar':'104','camboya':'116','laos':'418',
+  'mongolia':'496','kazajistan':'398','uzbekistan':'860','israel':'376',
+  'arabia saudi':'682','iran':'364','irak':'368','siria':'760','jordania':'400',
+  'libano':'422','emiratos arabes unidos':'784','catar':'634','kuwait':'414',
+  'oman':'512','yemen':'887','afganistan':'4',
+  'marruecos':'504','argelia':'12','tunez':'788','libia':'434','egipto':'818',
+  'sudan':'729','etiopia':'231','kenia':'404','tanzania':'834','uganda':'800',
+  'nigeria':'566','ghana':'288','costa de marfil':'384','senegal':'686','mali':'466',
+  'sudafrica':'710','zimbabue':'716','zambia':'894','mozambique':'508','angola':'24',
+  'republica democratica del congo':'180','republica del congo':'178','congo':'178',
+  'camerun':'120','gabon':'266','namibia':'516','botsuana':'72','madagascar':'450',
+  'australia':'36','nueva zelanda':'554','fiyi':'242','papua nueva guinea':'598'
+};
+function normalizeCountryName(str){
+  return String(str || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z\s]/g,'').trim().replace(/\s+/g,' ');
+}
+function countryIso(name){ return COUNTRY_ES_TO_ISO[normalizeCountryName(name)] || null; }
+
+// Agrupa todos los elementos de la colección abierta (sin tener en cuenta
+// los filtros activos: el análisis es siempre sobre toda la colección) por
+// su campo de país/emisor.
+function computeCountryCounts(){
+  const fields = currentCollectionMeta.fields || [];
+  const countryField = findFieldByHints(fields, ['pais', 'país', 'emisor', 'country']);
+  if (!countryField) return null;
+  const counts = {};
+  currentItems.forEach(i => {
+    const v = (i.campos?.[countryField.key] || '').trim();
+    if (!v) return;
+    counts[v] = (counts[v] || 0) + 1;
+  });
+  return { field: countryField, counts };
+}
+
+let _mapLibsPromise = null;
+function loadMapLibs(){
+  if (_mapLibsPromise) return _mapLibsPromise;
+  _mapLibsPromise = new Promise((resolve, reject) => {
+    const s1 = document.createElement('script');
+    s1.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+    s1.onload = () => {
+      const s2 = document.createElement('script');
+      s2.src = 'https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js';
+      s2.onload = () => resolve();
+      s2.onerror = () => reject(new Error('No se pudo cargar topojson-client'));
+      document.head.appendChild(s2);
+    };
+    s1.onerror = () => reject(new Error('No se pudo cargar d3'));
+    document.head.appendChild(s1);
+  });
+  return _mapLibsPromise;
+}
+
+let _worldTopoCache = null;
+async function renderWorldMap(counts){
+  const wrap = document.getElementById('an-map-wrap');
+  await loadMapLibs();
+  if (!_worldTopoCache) {
+    const res = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+    if (!res.ok) throw new Error('No se pudo descargar el mapa');
+    _worldTopoCache = await res.json();
+  }
+  const topo = _worldTopoCache;
+  const geo = topojson.feature(topo, topo.objects.countries);
+
+  const isoCounts = {};
+  Object.entries(counts).forEach(([name, count]) => {
+    const iso = countryIso(name);
+    if (iso) isoCounts[iso] = (isoCounts[iso] || 0) + count;
+  });
+  const maxC = Math.max(1, ...Object.values(isoCounts));
+
+  const width = 640, height = 340;
+  const projection = d3.geoNaturalEarth1().fitSize([width - 4, height - 4], geo);
+  const path = d3.geoPath(projection);
+
+  const svg = d3.create('svg').attr('viewBox', `0 0 ${width} ${height}`).attr('id', 'an-map').attr('preserveAspectRatio', 'xMidYMid meet');
+  svg.selectAll('path').data(geo.features).join('path')
+    .attr('d', path)
+    .attr('class', d => isoCounts[d.id] ? 'has-coin' : '')
+    .style('fill-opacity', d => isoCounts[d.id] ? (0.4 + 0.6 * (isoCounts[d.id] / maxC)) : null)
+    .append('title').text(d => isoCounts[d.id] ? `${d.properties.name}: ${isoCounts[d.id]}` : d.properties.name);
+
+  if (wrap) { wrap.innerHTML = ''; wrap.appendChild(svg.node()); }
+}
+
+async function renderAnalysis(){
+  const body = document.getElementById('analysis-body');
+  const data = computeCountryCounts();
+  const total = currentItems.length;
+  const repetidasCount = currentItems.filter(i => i.repetido).length;
+
+  if (!data) {
+    body.innerHTML = `
+      <div class="an-stats"><div class="stat"><b>${total}</b>elementos</div></div>
+      <p class="hint">Esta colección no tiene un campo de <b>País</b> o <b>Emisor</b> configurado, así que no se puede mostrar la distribución por país ni el mapa. Añade un campo con ese nombre en Ajustes ⚙️ → Editar campos para activar este análisis.</p>`;
+    return;
+  }
+
+  const entries = Object.entries(data.counts).sort((a, b) => b[1] - a[1]);
+  const distinctCountries = entries.length;
+  const maxCount = entries.length ? entries[0][1] : 0;
+
+  body.innerHTML = `
+    <div class="an-stats">
+      <div class="stat"><b>${total}</b>elementos</div>
+      <div class="stat"><b>${distinctCountries}</b>países / emisores</div>
+      ${currentCollectionMeta.type === 'checklist' ? `<div class="stat"><b style="color:var(--green);">${currentItems.filter(i=>i.tengo).length}</b>tengo</div>` : ''}
+      <div class="stat"><b>${repetidasCount}</b>repetidas</div>
+    </div>
+    <div class="an-cols">
+      <div>
+        <h3 style="font-size:.92rem;color:var(--brass);margin-bottom:10px;">Distribución por ${escapeHtml(data.field.label)}</h3>
+        <div class="an-list">
+          ${entries.map(([name, count]) => `
+            <div class="an-row">
+              <span class="an-name" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
+              <span class="an-count">${count}</span>
+              <span class="an-bar-bg"><div style="width:${Math.max(4, Math.round(count / maxCount * 100))}%;"></div></span>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div>
+        <h3 style="font-size:.92rem;color:var(--brass);margin-bottom:10px;">Mapa de países representados</h3>
+        <div id="an-map-wrap"><p class="hint">Cargando mapa...</p></div>
+      </div>
+    </div>`;
+
+  renderWorldMap(data.counts).catch(() => {
+    const wrap = document.getElementById('an-map-wrap');
+    if (wrap) wrap.innerHTML = '<p class="hint">No se ha podido cargar el mapa (sin conexión a internet en este momento). El listado de la izquierda sigue siendo exacto.</p>';
+  });
+}
+document.getElementById('btn-analysis').onclick = () => { openModal('modal-analysis'); renderAnalysis(); };
 
 /* pre-cargar miniaturas visibles en tarjetas libres */
 const thumbObserver = new MutationObserver(() => {
