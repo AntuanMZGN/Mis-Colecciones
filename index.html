@@ -294,7 +294,10 @@
     <div id="view-list">
       <div class="toolbar">
         <button class="btn primary" id="btn-new-collection">+ Nueva colección</button>
+        <button class="btn" id="btn-cromos-template">🎴 Plantilla CROMOS</button>
       </div>
+      <datalist id="dl-categorias"></datalist>
+      <datalist id="dl-subcategorias"></datalist>
       <div id="collections-grid" class="grid-cols"></div>
       <div id="collections-empty" class="empty-state" style="display:none;">
         Aún no tienes ninguna colección. Crea la primera con "+ Nueva colección".
@@ -339,6 +342,10 @@
     <div class="field"><label>Nombre de la colección</label><input id="nc-name" placeholder="Ej. Cajas metálicas antiguas"></div>
     <div class="field"><label>Icono</label><input id="nc-icon" maxlength="2" value="📦" style="width:80px;">
       <div class="chips" id="nc-icons"></div></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <div class="field" style="flex:1;min-width:160px;"><label>Categoría (opcional)</label><input id="nc-categoria" list="dl-categorias" placeholder="Ej. CROMOS"></div>
+      <div class="field" style="flex:1;min-width:160px;"><label>Subcategoría (opcional)</label><input id="nc-subcategoria" list="dl-subcategorias" placeholder="Ej. Deportes (Ligas)"></div>
+    </div>
     <label>¿Cómo quieres empezarla?</label>
     <div class="option-row">
       <div class="option-btn" onclick="selectNewCollectionMode('libre')">
@@ -402,6 +409,10 @@
       <label>Valor facial fijo (opcional)</label>
       <input id="set-valor-fijo" placeholder="Ej: 2 € — déjalo vacío si cada elemento tiene su propio valor">
       <p class="hint" style="margin:4px 0 0;">Úsalo cuando todos los elementos valen lo mismo (p. ej. una colección de monedas conmemorativas de 2€) y no tengas un campo de "valor" por fila. Se usará para calcular el "valor total" de arriba.</p>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <div class="field" style="flex:1;min-width:160px;"><label>Categoría (opcional)</label><input id="set-categoria" list="dl-categorias" placeholder="Ej. CROMOS"></div>
+      <div class="field" style="flex:1;min-width:160px;"><label>Subcategoría (opcional)</label><input id="set-subcategoria" list="dl-subcategorias" placeholder="Ej. Deportes (Ligas)"></div>
     </div>
     <div class="actions-list">
       <button class="btn" id="act-fields">🧩 Editar campos (columnas) de la colección</button>
@@ -556,6 +567,8 @@ let libreFieldDraft = [];
 let editingItemId = null;
 let importParsedRows = null;
 let importHeaders = [];
+let navCategoria = null;    // categoría en la que estamos navegando (o null = raíz)
+let navSubcategoria = null; // subcategoría en la que estamos navegando (o null)
 
 /* =========================================================================
    AUTENTICACIÓN
@@ -594,25 +607,60 @@ function snapshotsPath(cid){ return `users/${uid()}/collections/${cid}/snapshots
 function navList(){
   flushStatsSync();
   currentCollectionId = null;
+  navCategoria = null; navSubcategoria = null;
   if (unsubItems) { unsubItems(); unsubItems = null; }
   document.getElementById('view-list').style.display = 'block';
   document.getElementById('view-detail').style.display = 'none';
-  document.getElementById('crumbs').innerHTML = `<b>Mis colecciones</b>`;
+  renderCrumbs();
   renderCollectionsGrid();
 }
+
+// Entra en una categoría (p. ej. "CROMOS"): a partir de aquí el listado
+// muestra sus subcategorías como carpetas, no colecciones todavía.
+function openCategoryNav(cat){
+  navCategoria = cat; navSubcategoria = null;
+  renderCrumbs(); renderCollectionsGrid();
+}
+// Entra en una subcategoría (p. ej. "Fantasía y Rol"): aquí es donde ya
+// aparecen las colecciones reales para abrir.
+function openSubcategoryNav(cat, sub){
+  navCategoria = cat; navSubcategoria = sub;
+  renderCrumbs(); renderCollectionsGrid();
+}
+window.navList = navList;
+window.openCategoryNav = openCategoryNav;
+window.openSubcategoryNav = openSubcategoryNav;
+
+// Construye las migas de pan según en qué nivel estemos: raíz, categoría,
+// subcategoría, o dentro de una colección concreta (usa data-attributes en
+// vez de onclick="..." para no romperse si el nombre lleva comillas).
+function renderCrumbs(meta){
+  const parts = [`<a data-crumb="root">Mis colecciones</a>`];
+  const cat = meta ? meta.categoria : navCategoria;
+  const sub = meta ? meta.subcategoria : navSubcategoria;
+  if (cat) parts.push(`<a data-crumb="cat" data-cat="${escapeHtml(cat)}">${escapeHtml(cat)}</a>`);
+  if (cat && sub) parts.push(`<a data-crumb="sub" data-cat="${escapeHtml(cat)}" data-sub="${escapeHtml(sub)}">${escapeHtml(sub)}</a>`);
+  if (meta) parts.push(`<b>${escapeHtml(meta.name)}</b>`);
+  else if (!cat) { document.getElementById('crumbs').innerHTML = `<b>Mis colecciones</b>`; return; }
+  document.getElementById('crumbs').innerHTML = parts.join(' &nbsp;›&nbsp; ');
+}
+document.getElementById('crumbs').addEventListener('click', e => {
+  const a = e.target.closest('[data-crumb]'); if (!a) return;
+  if (a.dataset.crumb === 'root') navList();
+  else if (a.dataset.crumb === 'cat') openCategoryNav(a.dataset.cat);
+  else if (a.dataset.crumb === 'sub') openSubcategoryNav(a.dataset.cat, a.dataset.sub);
+});
 
 function openCollection(cid){
   currentCollectionId = cid;
   currentCollectionMeta = collectionsCache.find(c => c.id === cid);
   document.getElementById('view-list').style.display = 'none';
   document.getElementById('view-detail').style.display = 'block';
-  document.getElementById('crumbs').innerHTML =
-    `<a onclick="navList()">Mis colecciones</a> &nbsp;›&nbsp; <b>${escapeHtml(currentCollectionMeta.name)}</b>`;
+  renderCrumbs(currentCollectionMeta);
   document.getElementById('detail-title').textContent =
     `${currentCollectionMeta.icon || '📚'} ${currentCollectionMeta.name}`;
   listenItems(cid);
 }
-window.navList = navList;
 window.openCollection = openCollection;
 
 /* =========================================================================
@@ -635,25 +683,93 @@ function listenCollections(){
   });
 }
 
+// Mantiene al día las sugerencias (autocompletar) de categoría/subcategoría
+// a partir de las que ya existan, para no tener que escribirlas de memoria
+// y evitar duplicados por una errata ("CROMOS" vs "Cromos").
+function updateCategoryDatalists(){
+  const cats = [...new Set(collectionsCache.map(c => c.categoria).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+  const subs = [...new Set(collectionsCache.map(c => c.subcategoria).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+  const dlCat = document.getElementById('dl-categorias'), dlSub = document.getElementById('dl-subcategorias');
+  if (dlCat) dlCat.innerHTML = cats.map(c => `<option value="${escapeHtml(c)}">`).join('');
+  if (dlSub) dlSub.innerHTML = subs.map(s => `<option value="${escapeHtml(s)}">`).join('');
+}
+
+function collectionCardHtml(c){
+  const total = c.stats?.total || 0;
+  const tengo = c.stats?.tengo || 0;
+  const pct = total ? Math.round((tengo/total)*100) : 0;
+  return `
+    <div class="col-card" data-nav="col" data-id="${c.id}">
+      <div class="icon">${c.icon || '📚'}</div>
+      <h3>${escapeHtml(c.name)}</h3>
+      <div class="meta">${c.type === 'libre' ? `${total} elementos` : `${tengo}/${total} (${pct}%)`}</div>
+      ${c.type !== 'libre' ? `<div class="bar"><div style="width:${pct}%;"></div></div>` : ''}
+    </div>`;
+}
+// Carpeta de categoría (p. ej. "CROMOS"): se muestra igual que una colección
+// normal en el listado principal, pero al pulsarla entra en sus subcategorías
+// en vez de abrir elementos.
+function categoryCardHtml(cat){
+  const cols = collectionsCache.filter(c => c.categoria === cat);
+  const subs = new Set(cols.map(c => c.subcategoria || 'Otros'));
+  return `
+    <div class="col-card" data-nav="cat" data-cat="${escapeHtml(cat)}">
+      <div class="icon">📂</div>
+      <h3>${escapeHtml(cat)}</h3>
+      <div class="meta">${subs.size} subcategoría${subs.size === 1 ? '' : 's'} · ${cols.length} colección${cols.length === 1 ? '' : 'es'}</div>
+    </div>`;
+}
+function subcategoryCardHtml(cat, sub){
+  const cols = collectionsCache.filter(c => c.categoria === cat && (c.subcategoria || 'Otros') === sub);
+  return `
+    <div class="col-card" data-nav="sub" data-cat="${escapeHtml(cat)}" data-sub="${escapeHtml(sub)}">
+      <div class="icon">🗂️</div>
+      <h3>${escapeHtml(sub)}</h3>
+      <div class="meta">${cols.length} colección${cols.length === 1 ? '' : 'es'}</div>
+    </div>`;
+}
+document.getElementById('collections-grid').addEventListener('click', e => {
+  const card = e.target.closest('[data-nav]'); if (!card) return;
+  const kind = card.dataset.nav;
+  if (kind === 'col') openCollection(card.dataset.id);
+  else if (kind === 'cat') openCategoryNav(card.dataset.cat);
+  else if (kind === 'sub') openSubcategoryNav(card.dataset.cat, card.dataset.sub);
+});
+
 function renderCollectionsGrid(){
   const grid = document.getElementById('collections-grid');
   const empty = document.getElementById('collections-empty');
-  if (collectionsCache.length === 0) {
-    grid.innerHTML = ''; empty.style.display = 'block'; return;
+  updateCategoryDatalists();
+  grid.className = 'grid-cols';
+  document.getElementById('btn-cromos-template').style.display = navCategoria ? 'none' : '';
+
+  // Dentro de una categoría: mostramos sus subcategorías como carpetas.
+  if (navCategoria && !navSubcategoria) {
+    const subs = [...new Set(collectionsCache.filter(c => c.categoria === navCategoria).map(c => c.subcategoria || 'Otros'))].sort((a, b) => a.localeCompare(b, 'es'));
+    empty.style.display = subs.length ? 'none' : 'block';
+    if (empty.style.display === 'block') empty.textContent = 'Esta categoría todavía no tiene subcategorías con colecciones.';
+    grid.innerHTML = subs.map(sub => subcategoryCardHtml(navCategoria, sub)).join('');
+    return;
+  }
+  // Dentro de una subcategoría: aquí es donde aparecen las colecciones reales.
+  if (navCategoria && navSubcategoria) {
+    const cols = collectionsCache.filter(c => c.categoria === navCategoria && (c.subcategoria || 'Otros') === navSubcategoria);
+    empty.style.display = cols.length ? 'none' : 'block';
+    if (empty.style.display === 'block') empty.textContent = 'Aún no tienes ninguna colección aquí. Crea la primera con "+ Nueva colección".';
+    grid.innerHTML = cols.map(collectionCardHtml).join('');
+    return;
+  }
+
+  // Raíz: categorías (carpetas) + colecciones sin categoría, todo al mismo
+  // nivel — una categoría se ve y se comporta como una colección más.
+  const cats = [...new Set(collectionsCache.filter(c => c.categoria).map(c => c.categoria))].sort((a, b) => a.localeCompare(b, 'es'));
+  const loose = collectionsCache.filter(c => !c.categoria);
+  if (!cats.length && !loose.length) {
+    empty.textContent = 'Aún no tienes ninguna colección. Crea la primera con "+ Nueva colección".';
+    empty.style.display = 'block'; grid.innerHTML = ''; return;
   }
   empty.style.display = 'none';
-  grid.innerHTML = collectionsCache.map(c => {
-    const total = c.stats?.total || 0;
-    const tengo = c.stats?.tengo || 0;
-    const pct = total ? Math.round((tengo/total)*100) : 0;
-    return `
-      <div class="col-card" onclick="openCollection('${c.id}')">
-        <div class="icon">${c.icon || '📚'}</div>
-        <h3>${escapeHtml(c.name)}</h3>
-        <div class="meta">${c.type === 'libre' ? `${total} elementos` : `${tengo}/${total} (${pct}%)`}</div>
-        ${c.type !== 'libre' ? `<div class="bar"><div style="width:${pct}%;"></div></div>` : ''}
-      </div>`;
-  }).join('');
+  grid.innerHTML = cats.map(categoryCardHtml).join('') + loose.map(collectionCardHtml).join('');
 }
 
 /* =========================================================================
@@ -661,8 +777,51 @@ function renderCollectionsGrid(){
    ========================================================================= */
 document.getElementById('btn-new-collection').onclick = () => {
   document.getElementById('nc-name').value = ''; document.getElementById('nc-name').classList.remove('err');
+  // Si estamos navegando dentro de una categoría/subcategoría, la nueva
+  // colección se propone ya clasificada ahí mismo (se puede cambiar antes de crear).
+  document.getElementById('nc-categoria').value = navCategoria || '';
+  document.getElementById('nc-subcategoria').value = navSubcategoria || '';
   openModal('modal-new-collection');
 };
+
+/* =========================================================================
+   PLANTILLA "CROMOS": crea de una vez la estructura de categoría/subcategoría
+   solicitada, con colecciones vacías de tipo checklist (código + nombre,
+   listas para ir marcando Tengo/Repe), cada una ya etiquetada con su
+   categoría y subcategoría. Los nombres de ejemplo se pueden renombrar o
+   borrar luego sin problema: la estructura (categoría > subcategoría) es lo
+   que se conserva.
+   ========================================================================= */
+const CROMOS_TEMPLATE = [
+  { sub: 'Fantasía y Rol', items: ['Fantasy Riders (Temporada 1)', 'Fantasy Riders (Temporada 2)', 'Fantasy Riders (Temporada 3)', 'Fantasy Riders (Temporada 4)'] },
+  { sub: 'Deportes (Ligas)', items: ['La Liga española 2024-2025'] },
+  { sub: 'Deportes (Selecciones)', items: ['Selección española 2025', 'Selección española 2026'] },
+  { sub: 'Cine, Animación y Ficción', items: ['Bola de Dragón', 'Harry Potter', 'Personajes Disney'] },
+  { sub: 'Cómics y Superhéroes', items: ['Villanos DC', 'Personajes de Marvel'] },
+  { sub: 'Otros', items: ['Trivia Alimentos'] }
+];
+async function createCromosTemplate(){
+  const existingNames = new Set(collectionsCache.map(c => norm(c.name)));
+  const toCreate = [];
+  CROMOS_TEMPLATE.forEach(({ sub, items }) => items.forEach(name => {
+    if (!existingNames.has(norm(name))) toCreate.push({ name, sub });
+  }));
+  if (!toCreate.length) { showToast('Ya tienes creadas todas las colecciones de la plantilla CROMOS'); return; }
+  const listado = toCreate.map(t => `• ${t.name}  —  ${t.sub}`).join('\n');
+  if (!confirm(`Se crearán ${toCreate.length} colecciones nuevas, vacías, dentro de la categoría "CROMOS":\n\n${listado}\n\n(Las que ya tengas creadas con el mismo nombre no se duplican.) ¿Continuar?`)) return;
+  try {
+    progress('Creando estructura CROMOS...', 0, toCreate.length);
+    const ops = toCreate.map(t => ([
+      'set',
+      doc(collection(db, colPath())),
+      { name: t.name, icon: '🎴', type: 'checklist', categoria: 'CROMOS', subcategoria: t.sub, fields: [], stats: { total: 0, tengo: 0 }, createdAt: serverTimestamp() }
+    ]));
+    await commitOps(ops, 'Creando estructura CROMOS...');
+    showToast(`${toCreate.length} colecciones creadas en «CROMOS»`);
+    openCategoryNav('CROMOS');
+  } finally { endProgress(); }
+}
+document.getElementById('btn-cromos-template').onclick = createCromosTemplate;
 const ICONS = ['🪙','🃏','📦','📚','🖼️','🎫','⚽','🧸','🚗','🏷️','📀','🔑'];
 document.getElementById('nc-icons').innerHTML = ICONS.map(i => `<span class="chip" data-i="${i}">${i}</span>`).join('');
 document.getElementById('nc-icons').addEventListener('click', e => { const c = e.target.closest('.chip'); if (c) document.getElementById('nc-icon').value = c.dataset.i; });
@@ -736,8 +895,10 @@ function selectNewCollectionMode(mode){
   const nameEl = document.getElementById('nc-name'), name = nameEl.value.trim();
   const icon = document.getElementById('nc-icon').value.trim() || '📚';
   if (!name) { nameEl.classList.add('err'); nameEl.focus(); showToast('Ponle un nombre a la colección'); return; }
+  const categoria = document.getElementById('nc-categoria').value.trim();
+  const subcategoria = document.getElementById('nc-subcategoria').value.trim();
   closeModal('modal-new-collection');
-  window._pendingCollection = { name, icon };
+  window._pendingCollection = { name, icon, categoria, subcategoria };
   if (mode === 'libre') {
     fieldsCtx = 'new'; fieldsDraft = mkFields(PRESETS['Genérica']);
     document.getElementById('fields-title').textContent = 'Campos de la ficha';
@@ -754,7 +915,7 @@ document.getElementById('btn-fields-ok').onclick = async () => {
   if (!fields.length) { showToast('Añade al menos un campo con nombre'); return; }
   if (fieldsCtx === 'new') {
     const pc = window._pendingCollection;
-    const ref = await addDoc(collection(db, colPath()), { name: pc.name, icon: pc.icon, type: 'libre', fields, stats: { total: 0, tengo: 0 }, createdAt: serverTimestamp() });
+    const ref = await addDoc(collection(db, colPath()), { name: pc.name, icon: pc.icon, type: 'libre', categoria: pc.categoria || '', subcategoria: pc.subcategoria || '', fields, stats: { total: 0, tengo: 0 }, createdAt: serverTimestamp() });
     closeModal('modal-libre-fields');
     showToast('Colección creada', async () => { await deleteDoc(doc(db, colPath(), ref.id)); });
     openCollection(ref.id);
@@ -917,7 +1078,7 @@ $('btn-import-ok').onclick = async () => {
     if (imp.mode === 'new') {
       fields = p.heads.map(h => ({ key: '', label: h, type: 'text' })); fields = finalizeFields(fields);
       const pc = window._pendingCollection;
-      const ref = await addDoc(collection(db, colPath()), { name: pc.name, icon: pc.icon, type: 'checklist', fields, stats: { total: 0, tengo: 0 }, createdAt: serverTimestamp() });
+      const ref = await addDoc(collection(db, colPath()), { name: pc.name, icon: pc.icon, type: 'checklist', categoria: pc.categoria || '', subcategoria: pc.subcategoria || '', fields, stats: { total: 0, tengo: 0 }, createdAt: serverTimestamp() });
       cid = ref.id;
     } else {
       cid = currentCollectionId; fields = [...(currentCollectionMeta.fields || [])]; existing = currentItems;
@@ -2007,15 +2168,17 @@ document.getElementById('btn-collection-settings').onclick = () => {
   $('act-update').style.display = chk ? '' : 'none';
   $('set-valor-fijo-wrap').style.display = chk ? '' : 'none';
   $('set-valor-fijo').value = currentCollectionMeta.valorFijo ?? '';
+  $('set-categoria').value = currentCollectionMeta.categoria || '';
+  $('set-subcategoria').value = currentCollectionMeta.subcategoria || '';
   if (settingsFormUndo) settingsFormUndo.reset();
   openModal('modal-settings');
 };
 async function saveCollectionSettings(){
-  const before = { name: currentCollectionMeta.name, icon: currentCollectionMeta.icon || '', valorFijo: currentCollectionMeta.valorFijo ?? null };
+  const before = { name: currentCollectionMeta.name, icon: currentCollectionMeta.icon || '', valorFijo: currentCollectionMeta.valorFijo ?? null, categoria: currentCollectionMeta.categoria || '', subcategoria: currentCollectionMeta.subcategoria || '' };
   const vfRaw = ($('set-valor-fijo').value || '').trim();
   const vf = vfRaw ? parseValorNumerico(vfRaw) : null;
   const cid = currentCollectionId;
-  await updateDoc(doc(db, colPath(), cid), { name: $('set-name').value, icon: $('set-icon').value, valorFijo: vf });
+  await updateDoc(doc(db, colPath(), cid), { name: $('set-name').value, icon: $('set-icon').value, valorFijo: vf, categoria: $('set-categoria').value.trim(), subcategoria: $('set-subcategoria').value.trim() });
   closeModal('modal-settings');
   showToast('Colección actualizada', async () => { await updateDoc(doc(db, colPath(), cid), before); });
 }
