@@ -1267,12 +1267,19 @@ function renderFiltersBar(){
   }
   box.innerHTML = html;
 }
+// Si el panel de Análisis está abierto, cualquier cambio de filtro (se haga
+// desde la barra principal o desde los controles del propio Análisis) lo
+// refresca también, para que el listado y el mapa reaccionen al momento.
+function refreshAnalysisIfOpen(){
+  if (document.getElementById('modal-analysis')?.classList.contains('open')) renderAnalysis();
+}
 function setFilter(key, value){
   renderLimit = RL0;
   if (value) filterState[key] = value; else delete filterState[key];
   renderDetailBody(); renderFiltersBar(); renderSummaryCounter(); renderValorTotal();
+  refreshAnalysisIfOpen();
 }
-function clearFilters(){ renderLimit = RL0; filterState = {}; renderDetailBody(); renderFiltersBar(); renderSummaryCounter(); renderValorTotal(); }
+function clearFilters(){ renderLimit = RL0; filterState = {}; renderDetailBody(); renderFiltersBar(); renderSummaryCounter(); renderValorTotal(); refreshAnalysisIfOpen(); }
 function setSort(field){
   renderLimit = RL0;
   if (sortState.field === field) sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
@@ -1355,7 +1362,7 @@ function renderDetailBody(){
     if (newWrap) newWrap.onscroll = () => { if (items.length > renderLimit && newWrap.scrollTop + newWrap.clientHeight > newWrap.scrollHeight - 400) moreRows(); };
   }
 }
-let searchTimer; document.getElementById('detail-search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { renderLimit = RL0; renderDetailBody(); renderSummaryCounter(); renderValorTotal(); }, 150); });
+let searchTimer; document.getElementById('detail-search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { renderLimit = RL0; renderDetailBody(); renderSummaryCounter(); renderValorTotal(); refreshAnalysisIfOpen(); }, 150); });
 
 document.getElementById('btn-mark-all').onclick = () => bulkSetTengo(true);
 document.getElementById('btn-unmark-all').onclick = () => bulkSetTengo(false);
@@ -1715,15 +1722,15 @@ function normalizeCountryName(str){
 }
 function countryIso(name){ return COUNTRY_ES_TO_ISO[normalizeCountryName(name)] || null; }
 
-// Agrupa todos los elementos de la colección abierta (sin tener en cuenta
-// los filtros activos: el análisis es siempre sobre toda la colección) por
-// su campo de país/emisor.
-function computeCountryCounts(){
+// Agrupa por país/emisor los elementos que se le pasen (normalmente
+// lastFilteredItems, es decir: respetando cualquier filtro activo —
+// búsqueda, país, estado Tengo/Me falta/Repetido...).
+function computeCountryCounts(items){
   const fields = currentCollectionMeta.fields || [];
   const countryField = findFieldByHints(fields, ['pais', 'país', 'emisor', 'country']);
   if (!countryField) return null;
   const counts = {};
-  currentItems.forEach(i => {
+  (items || []).forEach(i => {
     const v = (i.campos?.[countryField.key] || '').trim();
     if (!v) return;
     counts[v] = (counts[v] || 0) + 1;
@@ -1769,8 +1776,15 @@ async function renderWorldMap(counts){
   });
   const maxC = Math.max(1, ...Object.values(isoCounts));
 
+  // Si lo que se está mostrando es un subconjunto (por ejemplo, con el
+  // filtro "Me falta" activo) hacemos zoom para encajar justo esos países;
+  // si no hay ningún país reconocido (o no hay filtro) se ve el mundo entero.
+  const matched = geo.features.filter(d => isoCounts[d.id]);
+  const focus = matched.length ? { type: 'FeatureCollection', features: matched } : geo;
+  const pad = matched.length ? 28 : 2;
+
   const width = 640, height = 340;
-  const projection = d3.geoNaturalEarth1().fitSize([width - 4, height - 4], geo);
+  const projection = d3.geoNaturalEarth1().fitExtent([[pad, pad], [width - pad, height - pad]], focus);
   const path = d3.geoPath(projection);
 
   const svg = d3.create('svg').attr('viewBox', `0 0 ${width} ${height}`).attr('id', 'an-map').attr('preserveAspectRatio', 'xMidYMid meet');
@@ -1783,16 +1797,51 @@ async function renderWorldMap(counts){
   if (wrap) { wrap.innerHTML = ''; wrap.appendChild(svg.node()); }
 }
 
+// Controles de filtro dentro del propio panel de Análisis: país/emisor y,
+// si la colección es de tipo checklist, el estado (Tengo/Me falta/Repetido).
+// Reutilizan setFilter/clearFilters, así que quedan sincronizados con el
+// filtro de la pantalla principal y se pueden cambiar sin cerrar el modal.
+function renderAnalysisFilters(countryField){
+  const box = document.getElementById('an-filters');
+  if (!box) return;
+  let html = '';
+  if (countryField) {
+    const values = [...new Set(currentItems.map(i => i.campos?.[countryField.key]).filter(v => v !== undefined && v !== ''))].sort((a, b) => a.localeCompare(b, 'es'));
+    const active = filterState[countryField.key] ? 'active' : '';
+    html += `<select class="filter-select ${active}" onchange="setFilter('${countryField.key}', this.value)">
+      <option value="">${escapeHtml(countryField.label)}: todos</option>
+      ${values.map(v => `<option value="${escapeHtml(v)}" ${filterState[countryField.key]===v?'selected':''}>${escapeHtml(v)}</option>`).join('')}
+    </select>`;
+  }
+  if (currentCollectionMeta.type === 'checklist') {
+    const estadoActive = filterState.__estado ? 'active' : '';
+    html += `<select class="filter-select ${estadoActive}" onchange="setFilter('__estado', this.value)">
+      <option value="">Estado: todos</option>
+      <option value="tengo" ${filterState.__estado==='tengo'?'selected':''}>✅ Tengo</option>
+      <option value="falta" ${filterState.__estado==='falta'?'selected':''}>❌ Me falta</option>
+      <option value="repetido" ${filterState.__estado==='repetido'?'selected':''}>♻️ Repetido</option>
+    </select>`;
+  }
+  if (Object.keys(filterState).length) html += `<button class="btn small" onclick="clearFilters()">✕ Quitar filtros</button>`;
+  box.innerHTML = html || '<span class="hint">No hay filtros disponibles para esta colección.</span>';
+}
+
 async function renderAnalysis(){
   const body = document.getElementById('analysis-body');
-  const data = computeCountryCounts();
-  const total = currentItems.length;
-  const repetidasCount = currentItems.filter(i => i.repetido).length;
+  const items = lastFilteredItems;
+  const data = computeCountryCounts(items);
+  const total = items.length;
+  const totalCollection = currentItems.length;
+  const hayFiltro = Object.keys(filterState).length > 0 || !!(document.getElementById('detail-search')?.value || '').trim();
+  const nota = hayFiltro ? ` <span class="hint" style="font-size:.68rem;">de ${totalCollection} (según el filtro activo)</span>` : '';
+  const repetidasCount = items.filter(i => i.repetido).length;
+  const filtrosHtml = `<div class="toolbar" id="an-filters" style="margin:0 0 14px;"></div>`;
 
   if (!data) {
-    body.innerHTML = `
-      <div class="an-stats"><div class="stat"><b>${total}</b>elementos</div></div>
+    body.innerHTML = filtrosHtml + `
+      <div class="an-stats"><div class="stat"><b>${total}</b>elementos${nota}</div></div>
       <p class="hint">Esta colección no tiene un campo de <b>País</b> o <b>Emisor</b> configurado, así que no se puede mostrar la distribución por país ni el mapa. Añade un campo con ese nombre en Ajustes ⚙️ → Editar campos para activar este análisis.</p>`;
+    renderAnalysisFilters(null);
     return;
   }
 
@@ -1800,30 +1849,34 @@ async function renderAnalysis(){
   const distinctCountries = entries.length;
   const maxCount = entries.length ? entries[0][1] : 0;
 
-  body.innerHTML = `
+  body.innerHTML = filtrosHtml + `
     <div class="an-stats">
-      <div class="stat"><b>${total}</b>elementos</div>
+      <div class="stat"><b>${total}</b>elementos${nota}</div>
       <div class="stat"><b>${distinctCountries}</b>países / emisores</div>
-      ${currentCollectionMeta.type === 'checklist' ? `<div class="stat"><b style="color:var(--green);">${currentItems.filter(i=>i.tengo).length}</b>tengo</div>` : ''}
+      ${currentCollectionMeta.type === 'checklist' ? `<div class="stat"><b style="color:var(--green);">${items.filter(i=>i.tengo).length}</b>tengo</div>` : ''}
       <div class="stat"><b>${repetidasCount}</b>repetidas</div>
     </div>
     <div class="an-cols">
       <div>
-        <h3 style="font-size:.92rem;color:var(--brass);margin-bottom:10px;">Distribución por ${escapeHtml(data.field.label)}</h3>
+        <h3 style="font-size:.92rem;color:var(--brass);margin-bottom:10px;">Distribución por ${escapeHtml(data.field.label)}${hayFiltro ? ' <span class="hint" style="font-size:.7rem;font-weight:normal;">(filtro activo)</span>' : ''}</h3>
         <div class="an-list">
-          ${entries.map(([name, count]) => `
+          ${entries.length ? entries.map(([name, count]) => `
             <div class="an-row">
               <span class="an-name" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
               <span class="an-count">${count}</span>
               <span class="an-bar-bg"><div style="width:${Math.max(4, Math.round(count / maxCount * 100))}%;"></div></span>
-            </div>`).join('')}
+            </div>`).join('') : '<p class="hint">Sin elementos con los filtros actuales.</p>'}
         </div>
       </div>
       <div>
-        <h3 style="font-size:.92rem;color:var(--brass);margin-bottom:10px;">Mapa de países representados</h3>
+        <h3 style="font-size:.92rem;color:var(--brass);margin-bottom:10px;">Mapa de países representados${hayFiltro ? ' <span class="hint" style="font-size:.7rem;font-weight:normal;">(filtro activo, con zoom)</span>' : ''}</h3>
         <div id="an-map-wrap"><p class="hint">Cargando mapa...</p></div>
       </div>
     </div>`;
+
+  renderAnalysisFilters(data.field);
+
+  if (!entries.length) { document.getElementById('an-map-wrap').innerHTML = '<p class="hint">Sin elementos con los filtros actuales.</p>'; return; }
 
   renderWorldMap(data.counts).catch(() => {
     const wrap = document.getElementById('an-map-wrap');
