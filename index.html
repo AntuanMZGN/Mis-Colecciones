@@ -1923,11 +1923,18 @@ function parseValorNumerico(str){
   // Busca un número real (al menos un dígito); un punto suelto sin dígitos
   // alrededor (frecuente en texto libre, p. ej. abreviaturas o el punto final
   // de una frase) no cuenta, para no devolver nunca NaN con campos de texto.
-  const m = s.match(/(\d+(?:\.\d+)?)/);
+  // La unidad (si la hay) se exige justo a continuación del número — no
+  // basta con que la palabra lleve una "c" en cualquier parte (antes
+  // "2 (bronce)" se confundía con céntimos y el valor se dividía entre 100
+  // por error); así solo cuentan como céntimos marcas reales como
+  // "50 c", "50cts" o "50 céntimos".
+  const m = s.match(/(\d+(?:\.\d+)?)\s*(€|eur|euros?|c(?:t?s?|ent(?:imos?)?|éntimos?)?)?/);
   if (!m) return 0;
   const n = parseFloat(m[1]);
   if (isNaN(n)) return 0;
-  return s.includes('c') && !s.includes('€') ? n / 100 : n; // "50 c" -> 0.50 ; "2 €" -> 2
+  const unidad = m[2] || '';
+  const esCentimos = /^(c|cts?|cent|centimos?|céntimos?)$/.test(unidad);
+  return esCentimos ? n / 100 : n;
 }
 // La ceca solo aporta información en Alemania (5 casas de moneda); en el resto
 // no varía, así que en el informe se reduce a la letra inicial para no ocupar espacio.
@@ -1972,6 +1979,18 @@ function scopedItemsSinEstado(){
   });
   return items;
 }
+// Normaliza el país/valor para agrupar correctamente aunque el texto tenga
+// variaciones de formato (espacios de más, mayúsculas, "2€" vs "2 €" vs
+// "2,00 €"...). Si el texto de valor contiene algún dígito se usa el número
+// ya interpretado por parseValorNumerico como clave (así "2€", "2 €" y
+// "2,00 €" caen en el mismo grupo); si no tiene dígitos (p. ej. una
+// denominación no numérica tipo "Conmemorativa") se usa el texto recortado
+// y en minúsculas, para no romper colecciones que no usan valores numéricos.
+function normalizeValorKey(str){
+  const s = String(str || '').trim();
+  if (/\d/.test(s)) return 'n:' + parseValorNumerico(s);
+  return 't:' + s.toLowerCase();
+}
 function buildValuePaisSummary(){
   const fields = currentCollectionMeta.fields || [];
   const paisField = findFieldByHints(fields, ['pais', 'país']);
@@ -1981,9 +2000,9 @@ function buildValuePaisSummary(){
 
   const groups = new Map();
   scopedItemsSinEstado().forEach(i => {
-    const pais = paisField ? (i.campos?.[paisField.key] || '—') : '—';
+    const pais = paisField ? String(i.campos?.[paisField.key] || '—').trim() || '—' : '—';
     const valor = i.campos?.[valorField.key] || i.nombre || '—';
-    const key = pais + '|||' + valor;
+    const key = normalizeValorKey(pais.toLowerCase()) + '|||' + normalizeValorKey(valor);
     if (!groups.has(key)) groups.set(key, { pais, valor, anosTengo: [] });
     if (i.tengo) groups.get(key).anosTengo.push(anoField ? (i.campos?.[anoField.key] || '') : '');
   });
