@@ -28,6 +28,7 @@
       --btn-bg:#ede6d6; --btn-fg:#14110f;
     }
     .ico-tile{background:color-mix(in srgb,var(--if) 24%,var(--panel2))!important;color:color-mix(in srgb,var(--if) 40%,#fff)!important;}
+    .panel-title{color:color-mix(in srgb,var(--pc) 40%,#fff);}
   }
   *{box-sizing:border-box;}
   html,body{height:100%;}
@@ -46,12 +47,24 @@
   .ico-tile.sm{width:38px;height:38px;border-radius:12px;} .ico-tile.sm svg{width:24px;height:24px;}
   .ico-tile.emoji{font-size:1.7rem;}
   .ico-tile.md.emoji{font-size:1.4rem;}
-  .icon-picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:8px;margin-top:6px;}
+  .icon-picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:8px;margin-top:6px;max-height:320px;overflow-y:auto;padding:2px;border:1px solid var(--border);border-radius:14px;padding:8px;}
+  .icon-group{grid-column:1/-1;font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:6px;}
+  .icon-opt small{display:block;font-size:.6rem;font-weight:400;color:var(--muted);}
   .icon-opt{display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 4px;border:2px solid transparent;border-radius:14px;background:var(--panel2);cursor:pointer;font-size:.68rem;color:var(--muted);text-align:center;}
   .icon-opt:hover{border-color:var(--border);}
   .icon-opt.on{border-color:var(--text);color:var(--text);font-weight:700;}
   .icon-opt .ico-tile.sm svg{width:24px;height:24px;}
   .title-with-icon{display:inline-flex;align-items:center;gap:12px;}
+  /* Paneles de botones agrupados por utilidad */
+  .panel{background:var(--panel);border:1px solid var(--border);border-top:4px solid var(--pc,var(--border));border-radius:18px;padding:12px 16px 6px;margin-top:12px;}
+  .panel-row{display:flex;flex-wrap:wrap;gap:12px;}
+  .panel-row .panel{flex:1 1 200px;}
+  .panel-title{margin:0 0 10px;font-family:var(--font-body);font-size:.7rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--pc,var(--muted));}
+  .panel .toolbar{margin:0 0 10px;}
+  .panel-sep{height:1px;background:var(--border);margin:6px 0 12px;}
+  .panel-sub{font-size:.74rem;color:var(--muted);margin-bottom:8px;}
+  #summary-counter{font-size:.85rem;border-radius:999px;}
+  #summary-counter small{color:var(--muted);}
   .brand{display:inline-flex;align-items:center;gap:10px;}
   a{color:var(--brass);}
   .wrap{max-width:1100px;margin:0 auto;padding:20px 16px 60px;}
@@ -347,20 +360,48 @@
           <div class="stat" id="valor-total-stat" style="display:none;"></div>
         </div>
       </div>
-      <div class="toolbar">
-        <input class="searchbar" id="detail-search" placeholder="Buscar...">
-        <button class="btn" id="btn-add-item">+ Añadir elemento</button>
-        <button class="btn" id="btn-mark-all">✅ Marcar todo</button>
-        <button class="btn" id="btn-unmark-all">⬜ Desmarcar todo</button>
-        <button class="btn" id="btn-snapshot">📸 Snapshot / Informe</button>
-        <button class="btn" id="btn-summary-report">📐 Resumen por valor</button>
-        <span class="stat" id="summary-counter" style="display:none;cursor:pointer;" onclick="document.getElementById('btn-summary-report').click()"></span>
-        <button class="btn" id="btn-gallery">🖼️ Galería</button>
-        <button class="btn" id="btn-analysis">📊 Análisis</button>
-        <button class="btn" id="btn-history">📈 Historial</button>
-        <button class="btn" id="btn-collection-settings">⚙️</button>
+      <!-- Botones agrupados por tipo de función; cada grupo lleva su título y su color. -->
+      <section class="panel" style="--pc:#1F5FA8;">
+        <h4 class="panel-title">Tabla · buscar y filtrar lo que ves</h4>
+        <div class="toolbar">
+          <input class="searchbar" id="detail-search" placeholder="Buscar...">
+          <span class="stat" id="summary-counter" style="display:none;" title="Elementos sin marcar como «tengo» entre los que muestran los filtros de país, año, valor... (el filtro «Estado» no influye en este contador)."></span>
+        </div>
+        <div class="toolbar" id="detail-filters"></div>
+        <div id="panel-masivo">
+          <div class="panel-sep"></div>
+          <div class="panel-sub">Marcado masivo · se aplica a los elementos que se ven ahora con los filtros</div>
+          <div class="toolbar" style="margin-bottom:0;">
+            <button class="btn" id="btn-mark-all">✅ Marcar todo</button>
+            <button class="btn" id="btn-unmark-all">⬜ Desmarcar todo</button>
+          </div>
+        </div>
+      </section>
+      <div class="panel-row">
+        <section class="panel" style="--pc:#2E7A1F;">
+          <h4 class="panel-title">Añadir</h4>
+          <div class="toolbar"><button class="btn" id="btn-add-item">+ Añadir elemento</button></div>
+        </section>
+        <section class="panel" style="--pc:#6B2D9B;">
+          <h4 class="panel-title">Ver y analizar</h4>
+          <div class="toolbar">
+            <button class="btn" id="btn-gallery">🖼️ Galería</button>
+            <button class="btn" id="btn-analysis">📊 Análisis</button>
+            <button class="btn" id="btn-history">📈 Historial</button>
+          </div>
+        </section>
+        <section class="panel" style="--pc:#B4440F;">
+          <h4 class="panel-title">Informes (PDF o Excel)</h4>
+          <div class="toolbar">
+            <button class="btn" id="btn-snapshot">📸 Informe / Snapshot</button>
+            <button class="btn" id="btn-summary-report" title="Una línea por país y valor, sumando todos los años">📐 Resumen por valor</button>
+          </div>
+        </section>
+        <section class="panel" style="--pc:#4A453C;">
+          <h4 class="panel-title">Colección</h4>
+          <div class="toolbar"><button class="btn" id="btn-collection-settings">⚙️ Ajustes de la colección</button></div>
+        </section>
       </div>
-      <div class="toolbar" id="detail-filters"></div>
       <div id="detail-body"></div>
     </div>
   </div>
@@ -533,13 +574,30 @@
     <button class="modal-close" onclick="closeModal('modal-report-format')">✕</button>
     <h2>Informe y snapshot</h2>
     <div class="field">
+      <label>Formato del archivo (se descarga; luego puedes imprimirlo tú si quieres)</label>
+      <label class="opt"><input type="radio" name="rep-fmt" value="pdf" checked><span><b>PDF</b> · para leer o imprimir</span></label>
+      <label class="opt"><input type="radio" name="rep-fmt" value="xlsx"><span><b>Excel</b> · hoja de cálculo editable</span></label>
+    </div>
+    <div class="field">
       <label class="opt"><input type="checkbox" id="report-solo-filtrado"><span>Usar solo lo filtrado/buscado ahora (<span id="report-filtro-count"></span>). Sin marcar: colección completa.</span></label>
       <label class="opt"><input type="checkbox" id="report-save-snap" checked><span>Guardar un punto en el historial de progreso (snapshot)</span></label>
     </div>
     <div class="option-row">
       <div class="option-btn" onclick="closeModal('modal-report-format');generateReport('agrupado')"><b>📊 Informe agrupado</b><span>Por país y año, ordenado por valor, con casillas de Tengo/Repe. Válido para color y blanco y negro.</span></div>
-      <div class="option-btn" onclick="closeModal('modal-report-format');generateReport('checklist')"><b>📋 Checklist compacta</b><span>Cuadrícula densa tipo álbum, para imprimir y marcar a mano.</span></div>
-      <div class="option-btn" onclick="closeModal('modal-report-format');saveSnapshot(true)"><b>📸 Solo guardar snapshot</b><span>Guarda el punto en el historial sin imprimir nada.</span></div>
+      <div class="option-btn" onclick="closeModal('modal-report-format');generateReport('checklist')"><b>📋 Checklist compacta</b><span>Cuadrícula densa tipo álbum, pensada para imprimir y marcar a mano.</span></div>
+      <div class="option-btn" onclick="closeModal('modal-report-format');saveSnapshot(true)"><b>📸 Solo guardar snapshot</b><span>Guarda el punto en el historial sin generar ningún archivo.</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Elegir formato (PDF / Excel) para el resumen por valor -->
+<div class="backdrop" id="modal-pick-format">
+  <div class="modal">
+    <button class="modal-close" onclick="pickFormat(null)">✕</button>
+    <h2>¿En qué formato?</h2>
+    <div class="option-row">
+      <div class="option-btn" onclick="pickFormat('pdf')"><b>📄 PDF</b><span>Para leer o imprimir. Se descarga como archivo.</span></div>
+      <div class="option-btn" onclick="pickFormat('xlsx')"><b>📗 Excel</b><span>Hoja de cálculo editable. Se descarga como archivo.</span></div>
     </div>
   </div>
 </div>
@@ -693,6 +751,8 @@ function openCollection(cid){
   document.getElementById('view-detail').style.display = 'block';
   renderCrumbs(currentCollectionMeta);
   renderDetailTitle();
+  // El marcado masivo («tengo») solo tiene sentido en colecciones de lista.
+  document.getElementById('panel-masivo').style.display = currentCollectionMeta.type === 'checklist' ? '' : 'none';
   listenItems(cid);
 }
 function renderDetailTitle(){
@@ -752,18 +812,79 @@ const ICON_SET = {
   claqueta: { label: 'Cine y animación', bg: '#D9E7F8', fg: '#1F5FA8', svg: '<rect x="5" y="13.5" width="22.5" height="13" rx="2" fill="currentColor" fill-opacity="0.16"/><path d="M4.2 9L27 5l.8 4.6L5 13.5z"/><path d="M10 8.2l1.6 4M16 7.2l1.6 4M22 6.2l1.6 4"/><path d="M14 17.5l5 3-5 3z"/>' },
   comic:    { label: 'Cómics y héroes',  bg: '#FDE0CC', fg: '#B4440F', svg: '<path d="M6 6h20a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H15l-6 5v-5H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" fill="currentColor" fill-opacity="0.16"/><path d="M17.5 9l-4.5 6.5h4.5L14 21"/>' },
   manzana:  { label: 'Alimentos / otros',bg: '#F8DCE8', fg: '#A3205E', svg: '<path d="M16 9c-2-2-7-1.5-7 4.5 0 5 3 10.5 7 10.5s7-5.5 7-10.5c0-6-5-6.5-7-4.5z" fill="currentColor" fill-opacity="0.16"/><path d="M16 9c0-2 1.2-3.8 3.5-4.5"/>' },
+  libro:    { label: 'Libros',           bg: '#E9E0D0', fg: '#6B4A1F', svg: '<path d="M6 5h15a3 3 0 0 1 3 3v19H9a3 3 0 0 1-3-3z" fill="currentColor" fill-opacity="0.16"/><path d="M6 24a3 3 0 0 1 3-3h15"/><path d="M11 10h8"/>' },
+  revista:  { label: 'Revistas y prensa',bg: '#E3E9F5', fg: '#3A4F8A', svg: '<rect x="7" y="4" width="18" height="24" rx="2" fill="currentColor" fill-opacity="0.16"/><path d="M11 9h10M11 14h10M11 19h6"/>' },
+  naipes:   { label: 'Cartas y naipes',  bg: '#F5DDE3', fg: '#9B1B3F', svg: '<rect x="6" y="7" width="15" height="19" rx="2.5" transform="rotate(-9 13.5 16.5)"/><rect x="11" y="6" width="15" height="20" rx="2.5" fill="currentColor" fill-opacity="0.16"/><path d="M18.5 11c-2.6 2.6-3.3 4-3.3 5.2a1.9 1.9 0 0 0 3.3 1.2c0 1.3-.6 2-1.3 2.6h2.6c-.7-.6-1.3-1.3-1.3-2.6a1.9 1.9 0 0 0 3.3-1.2c0-1.2-.7-2.6-3.3-5.2z"/>' },
+  ticket:   { label: 'Entradas y tickets',bg:'#FCE9C9', fg: '#9A5B00', svg: '<path d="M4 9h24v5a2.5 2.5 0 0 0 0 5v5H4v-5a2.5 2.5 0 0 0 0-5z" fill="currentColor" fill-opacity="0.16"/><path d="M21 9v15" stroke-dasharray="2 2"/>' },
+  foto:     { label: 'Fotos y postales', bg: '#DDEBF3', fg: '#1E6384', svg: '<rect x="4" y="7" width="24" height="18" rx="2" fill="currentColor" fill-opacity="0.16"/><circle cx="11" cy="14" r="2"/><path d="M4 22l7-6 5 4 4-3 8 6"/>' },
+  mapa:     { label: 'Mapas',            bg: '#E2EEDC', fg: '#4B6B1E', svg: '<path d="M4 8l8-3 8 3 8-3v19l-8 3-8-3-8 3z" fill="currentColor" fill-opacity="0.16"/><path d="M12 5v19M20 8v19"/>' },
+  tv:       { label: 'Series y TV',      bg: '#DCE4F5', fg: '#2D4AA8', svg: '<rect x="4" y="8" width="24" height="16" rx="2" fill="currentColor" fill-opacity="0.16"/><path d="M12 28h8M16 24v4"/>' },
+  disco:    { label: 'Discos y vinilos', bg: '#E5E5EA', fg: '#3B3B52', svg: '<circle cx="16" cy="16" r="12" fill="currentColor" fill-opacity="0.16"/><circle cx="16" cy="16" r="4"/><path d="M16 16v.01M8 16a8 8 0 0 1 8-8"/>' },
+  musica:   { label: 'Música',           bg: '#EADDF3', fg: '#6A2C91', svg: '<path d="M12 23V8l12-3v15" fill="none"/><circle cx="9" cy="23" r="3" fill="currentColor" fill-opacity="0.16"/><circle cx="21" cy="20" r="3" fill="currentColor" fill-opacity="0.16"/>' },
+  mando:    { label: 'Videojuegos',      bg: '#E1DCF7', fg: '#4333A8', svg: '<path d="M9 10h14a5 5 0 0 1 5 5v4a3 3 0 0 1-5.2 2L21 19H11l-1.8 2A3 3 0 0 1 4 19v-4a5 5 0 0 1 5-5z" fill="currentColor" fill-opacity="0.16"/><path d="M10 14v4M8 16h4M21 15v.01M24 17v.01"/>' },
+  arte:     { label: 'Arte y pintura',   bg: '#FADCE6', fg: '#B02A5B', svg: '<path d="M16 4C9 4 4 9 4 15s5 12 11 12c3 0 3-3 1.5-4.500S17 20 20 20h4c2.5 0 4-2 4-5 0-6-5-11-12-11z" fill="currentColor" fill-opacity="0.16"/><path d="M10 14v.01M14 9v.01M21 10v.01"/>' },
+  pluma:    { label: 'Plumas y escritura',bg:'#E6E1D6', fg: '#5A4A2B', svg: '<path d="M26 5c-11 0-17 7-17 17h5c9 0 12-7 12-17z" fill="currentColor" fill-opacity="0.16"/><path d="M9 22L5 27M14 17l5-5"/>' },
+  camara:   { label: 'Cámaras',          bg: '#E4E4E4', fg: '#3A3A3A', svg: '<path d="M5 10h5l2-3h8l2 3h5v15H5z" fill="currentColor" fill-opacity="0.16"/><circle cx="16" cy="17" r="4.5"/>' },
+  radio:    { label: 'Radios y electrónica',bg:'#F3E3D3', fg: '#8A4B16', svg: '<rect x="4" y="10" width="24" height="16" rx="3" fill="currentColor" fill-opacity="0.16"/><circle cx="11" cy="18" r="4"/><path d="M18 15h7M18 19h7M10 10L22 4"/>' },
+  baloncesto:{label: 'Baloncesto y otros',bg:'#FBE1C8', fg: '#A8480A', svg: '<circle cx="16" cy="16" r="12" fill="currentColor" fill-opacity="0.16"/><path d="M4 16h24M16 4v24M7 7c5 4 5 14 0 18M25 7c-5 4-5 14 0 18"/>' },
+  camiseta: { label: 'Camisetas y ropa', bg: '#DDEBF7', fg: '#1D5FA0', svg: '<path d="M11 5l-7 5 3 5 3-1v13h12V14l3 1 3-5-7-5c-1 2-3 3-5 3s-4-1-5-3z" fill="currentColor" fill-opacity="0.16"/>' },
+  zapatilla:{ label: 'Calzado',          bg: '#E8F0D8', fg: '#4F6B14', svg: '<path d="M4 22v-6l6-2 3 3h6c4 0 9 2 9 6v3H4z" fill="currentColor" fill-opacity="0.16"/><path d="M4 22h24M13 17l2-2"/>' },
+  trofeo:   { label: 'Trofeos y copas',  bg: '#FBF0C4', fg: '#8A6A00', svg: '<path d="M10 5h12v8a6 6 0 0 1-12 0z" fill="currentColor" fill-opacity="0.16"/><path d="M10 8H5v2a4 4 0 0 0 5 4M22 8h5v2a4 4 0 0 1-5 4M16 19v5M11 27h10M13 24h6"/>' },
+  bandera:  { label: 'Banderas',         bg: '#F8DCD8', fg: '#B02A1F', svg: '<path d="M7 28V5"/><path d="M7 6h18l-4 5 4 5H7z" fill="currentColor" fill-opacity="0.16"/>' },
+  osito:    { label: 'Juguetes y peluches',bg:'#F6E3D3', fg: '#8C4F22', svg: '<circle cx="16" cy="18" r="9" fill="currentColor" fill-opacity="0.16"/><circle cx="9" cy="9" r="3.5"/><circle cx="23" cy="9" r="3.5"/><path d="M13 17v.01M19 17v.01M14 21c1 1 3 1 4 0"/>' },
+  robot:    { label: 'Figuras y robots', bg: '#D8EEF1', fg: '#12707F', svg: '<rect x="8" y="10" width="16" height="13" rx="3" fill="currentColor" fill-opacity="0.16"/><path d="M16 10V6M13 6h6M13 16v.01M19 16v.01M13 20h6M5 15v4M27 15v4M11 27v-4M21 27v-4"/>' },
+  coche:    { label: 'Coches y miniaturas',bg:'#F9DCDC', fg: '#A32020', svg: '<path d="M4 21v-5l3.5-7h17L28 16v5z" fill="currentColor" fill-opacity="0.16"/><path d="M9 16h14"/><circle cx="10" cy="22" r="3" fill="currentColor" fill-opacity="0.16"/><circle cx="22" cy="22" r="3" fill="currentColor" fill-opacity="0.16"/>' },
+  tren:     { label: 'Trenes y maquetas',bg: '#E3E3F5', fg: '#3A3A9A', svg: '<rect x="8" y="4" width="16" height="19" rx="4" fill="currentColor" fill-opacity="0.16"/><path d="M8 14h16M12 18v.01M20 18v.01M11 28l3-5M21 28l-3-5"/>' },
+  avion:    { label: 'Aviones y viajes', bg: '#DCEBFA', fg: '#1A5FA6', svg: '<path d="M28 4L4 13l9 4 4 9z" fill="currentColor" fill-opacity="0.16"/><path d="M13 17L28 4"/>' },
+  espacio:  { label: 'Espacio y ciencia',bg: '#DDE0F5', fg: '#33399B', svg: '<path d="M16 3c5 3 7 9 6 16l-6 5-6-5c-1-7 1-13 6-16z" fill="currentColor" fill-opacity="0.16"/><circle cx="16" cy="13" r="2.5"/><path d="M10 19l-5 4 1 5 5-3M22 19l5 4-1 5-5-3"/>' },
+  reloj:    { label: 'Relojes',          bg: '#EFE4D2', fg: '#6B4A14', svg: '<circle cx="16" cy="17" r="10" fill="currentColor" fill-opacity="0.16"/><path d="M16 11v6l4 2M12 4h8"/>' },
+  joya:     { label: 'Joyas y gemas',    bg: '#D7F0F5', fg: '#0E6E80', svg: '<path d="M8 6h16l5 7-13 14L3 13z" fill="currentColor" fill-opacity="0.16"/><path d="M3 13h26M12 6l-3 7 7 14 7-14-3-7"/>' },
+  llave:    { label: 'Llaves y llaveros',bg: '#F3EBCB', fg: '#7A6410', svg: '<circle cx="10" cy="16" r="5" fill="currentColor" fill-opacity="0.16"/><path d="M15 16h13M24 16v5M28 16v4"/>' },
+  chapa:    { label: 'Medallas y chapas',bg: '#FADFCB', fg: '#A5460E', svg: '<circle cx="16" cy="18" r="8" fill="currentColor" fill-opacity="0.16"/><path d="M11 4l5 8 5-8M16 14.500l1.2 2.4 2.6.4-1.9 1.8.5 2.6-2.4-1.3-2.4 1.3.5-2.6-1.9-1.8 2.6-.4z"/>' },
+  botella:  { label: 'Botellas y vinos', bg: '#E0EED5', fg: '#3B6B14', svg: '<path d="M13 4h6v6c3 2 4 4 4 7v9a2 2 0 0 1-2 2H11a2 2 0 0 1-2-2v-9c0-3 1-5 4-7z" fill="currentColor" fill-opacity="0.16"/><path d="M13 4h6M9 18h14"/>' },
+  lata:     { label: 'Latas y cajas',    bg: '#E9E4E0', fg: '#5A4036', svg: '<path d="M6 10c0-2 4-4 10-4s10 2 10 4v12c0 2-4 4-10 4S6 24 6 22z" fill="currentColor" fill-opacity="0.16"/><path d="M6 10c0 2 4 4 10 4s10-2 10-4"/>' },
+  anfora:   { label: 'Antigüedades',     bg: '#F1DFCB', fg: '#8A4A1B', svg: '<path d="M13 4c0 3-5 4-5 11 0 7 4 13 8 13s8-6 8-13c0-7-5-8-5-11" fill="currentColor" fill-opacity="0.16"/><path d="M12 4h8M8 15c-3 0-3 5 0 5M24 15c3 0 3 5 0 5"/>' },
+  tarjeta:  { label: 'Tarjetas',         bg: '#E3EBF7', fg: '#2A4F94', svg: '<rect x="3" y="7" width="26" height="18" rx="3" fill="currentColor" fill-opacity="0.16"/><path d="M3 13h26M7 20h6"/>' },
+  planta:   { label: 'Plantas y semillas',bg:'#DCF0DC', fg: '#1F7A2E', svg: '<path d="M16 28V14"/><path d="M16 14C16 8 11 5 6 5c0 6 4 9 10 9z" fill="currentColor" fill-opacity="0.16"/><path d="M16 18c0-4 4-7 10-7 0 5-4 8-10 7z" fill="currentColor" fill-opacity="0.16"/>' },
+  animales: { label: 'Animales',         bg: '#F4E6D0', fg: '#8A5A17', svg: '<circle cx="9" cy="14" r="2.5"/><circle cx="14" cy="9" r="2.5"/><circle cx="20" cy="9" r="2.5"/><circle cx="25" cy="14" r="2.5"/><path d="M16 15c-4 0-8 5-8 8 0 3 3 3 5 2s5-1 6 0 5 1 5-2c0-3-4-8-8-8z" fill="currentColor" fill-opacity="0.16"/>' },
+  fosil:    { label: 'Fósiles y conchas',bg: '#E8E1D2', fg: '#6B5B3A', svg: '<path d="M16 16a2 2 0 0 1 4 0 5 5 0 0 1-10 0 8 8 0 0 1 16 0 11 11 0 0 1-11 11"/>' },
+  ancla:    { label: 'Barcos y mar',     bg: '#D6EAF2', fg: '#145F7E', svg: '<circle cx="16" cy="7" r="3"/><path d="M16 10v18M9 16h14M7 21c1 4 5 7 9 7s8-3 9-7"/>' },
   generico: { label: 'Otra colección',   bg: '#E8E4DA', fg: '#4A453C', svg: '<path d="M4 10l12-6 12 6v12l-12 6-12-6z" fill="currentColor" fill-opacity="0.16"/><path d="M4 10l12 6 12-6M16 16v12"/>' }
 };
 // Reglas para reconocer una colección antigua por su texto (ya sin tildes).
 const ICON_GUESS_RULES = [
   [/sello|filateli/, 'sello'], [/billete/, 'billete'],
+  [/camiseta|ropa|bufanda|gorra|equipacion|textil/, 'camiseta'],
   [/liga|futbol|laliga/, 'balon'], [/selecci/, 'escudo'],
   [/fantas|\brol\b|rider|dungeon|d&d/, 'd20'],
-  [/cine|animaci|ficci|disney|harry|dragon|pelicula/, 'claqueta'],
-  [/comic|superh|marvel|\bdc\b|villano|heroe/, 'comic'],
+  [/cine|animaci|ficci|disney|harry|dragon|pelicula|dvd|blu-?ray/, 'claqueta'],
+  [/comic|superh|marvel|\bdc\b|villano|heroe|manga|tebeo/, 'comic'],
   [/alimento|trivia|comida|\botros\b/, 'manzana'],
   [/\beuros?\b/, 'euro'], [/mundo|world|moned|coin|numism/, 'mundo'],
-  [/cromo|sticker|panini|album/, 'cromos']
+  [/naipe|baraja|\bcartas?\b|pokemon|magic|yu-?gi-?oh|\btcg\b/, 'naipes'],
+  [/cromo|sticker|panini/, 'cromos'],
+  [/libro|novela|literat|biblioteca/, 'libro'], [/revista|periodic|prensa|diario/, 'revista'],
+  [/vinilo|\bdiscos?\b|\bcds?\b|casete|cassette/, 'disco'], [/music|cancion|instrument/, 'musica'],
+  [/videojuego|consola|nintendo|playstation|sega|atari|\bmando\b/, 'mando'],
+  [/juguete|peluche|\boso\b|osito|mu[nñ]eca|lego|playmobil/, 'osito'],
+  [/figura|robot|funko|\bfigurita|miniatura de/, 'robot'],
+  [/coche|automovil|matricula|\bmoto\b|hot ?wheels|scalextric/, 'coche'],
+  [/\btrenes?\b|ferrocarril|maqueta|locomotora/, 'tren'], [/avion|aviacion|aerolinea|aeropuerto|viaje/, 'avion'],
+  [/espacio|astronom|cohete|nasa|ciencia|planeta/, 'espacio'],
+  [/reloj|cronometro/, 'reloj'], [/joya|anillo|diamante|gema|pulsera|collar|mineral/, 'joya'],
+  [/fosil|concha|ammonit|caracol/, 'fosil'], [/planta|semilla|herbario|flor|jardin|arbol/, 'planta'],
+  [/animal|perro|gato|mascota|dinosaurio|pajaro|insecto|mariposa/, 'animales'],
+  [/anfora|antiguedad|arqueolog|romano|ceramica|jarron|vasija/, 'anfora'],
+  [/entrada|ticket|abono/, 'ticket'], [/postal|fotograf|\bfotos?\b|polaroid/, 'foto'],
+  [/chapa|medalla|insignia|condecor|\bpins?\b|pin\b/, 'chapa'], [/llave|llavero/, 'llave'],
+  [/bandera|vexilolog/, 'bandera'], [/\bmapas?\b|atlas|cartograf/, 'mapa'],
+  [/camara|fotografica/, 'camara'], [/radio|telefono|electron|ordenador|calculadora|walkman/, 'radio'],
+  [/botella|vino|cerveza|licor|perfume|whisky|ron\b/, 'botella'], [/\blatas?\b|\bcajas?\b|hojalata/, 'lata'],
+  [/pluma|boligrafo|estilograf|escritura|autograf|firma/, 'pluma'],
+  [/zapatilla|calzado|\bbotas?\b/, 'zapatilla'],
+  [/baloncesto|\bnba\b|tenis|rugby|balonmano|deporte|ciclismo/, 'baloncesto'], [/trofeo|\bcopas?\b/, 'trofeo'],
+  [/\barte\b|pintura|cuadro|dibujo|escultura|grabado|lamina/, 'arte'], [/tarjeta|telefonica/, 'tarjeta'],
+  [/\bancla\b|barco|naval|marin|nautic|\bmar\b/, 'ancla'], [/\bseries?\b|television|\btv\b|netflix/, 'tv']
 ];
 function guessIconKey(...texts){
   for (const t of texts) {
@@ -773,6 +894,7 @@ function guessIconKey(...texts){
   }
   return null;
 }
+window.guessIconKey = guessIconKey;
 // Clave de icono SVG de una colección (elegida o deducida), o null → emoji.
 function iconKeyFor(c){
   if (typeof c.icon === 'string' && c.icon.startsWith('svg:')) {
@@ -802,11 +924,23 @@ function iconPlain(icon){
   return (icon && !String(icon).startsWith('svg:')) ? icon : '';
 }
 // Selector de icono: cuadrícula de baldosas + "Automático" (deduce por nombre).
+const ICON_GROUPS = [
+  ['Dinero y papel', ['euro', 'mundo', 'billete', 'sello', 'tarjeta', 'ticket', 'foto', 'mapa']],
+  ['Cromos, libros y cómics', ['cromos', 'naipes', 'libro', 'revista', 'comic', 'pluma', 'arte']],
+  ['Cine, música y juegos', ['claqueta', 'tv', 'disco', 'musica', 'mando', 'd20', 'camara', 'radio']],
+  ['Deporte', ['balon', 'baloncesto', 'escudo', 'camiseta', 'zapatilla', 'trofeo', 'bandera', 'chapa']],
+  ['Juguetes y transporte', ['osito', 'robot', 'coche', 'tren', 'avion', 'espacio', 'ancla']],
+  ['Objetos y hogar', ['reloj', 'joya', 'llave', 'botella', 'lata', 'anfora', 'generico']],
+  ['Naturaleza y comida', ['planta', 'animales', 'fosil', 'manzana']]
+];
 function buildIconPicker(boxId, inputId){
   const box = document.getElementById(boxId);
+  const listed = new Set(ICON_GROUPS.flatMap(g => g[1]));
+  const groups = ICON_GROUPS.concat([['Más', Object.keys(ICON_SET).filter(k => !listed.has(k))]]).filter(g => g[1].length);
   box.innerHTML =
-    `<div class="icon-opt" data-i=""><span class="ico-tile sm" style="--ib:#F3EEE4;--if:#6A6358;">auto</span>Automático</div>` +
-    Object.entries(ICON_SET).map(([k, ic]) => `<div class="icon-opt" data-i="svg:${k}">${iconTileHtml(k, 'sm')}${ic.label}</div>`).join('');
+    `<div class="icon-opt" data-i=""><span class="ico-tile sm" style="--ib:#F3EEE4;--if:#6A6358;">auto</span>Automático<small>según el nombre</small></div>` +
+    groups.map(([title, keys]) => `<div class="icon-group">${escapeHtml(title)}</div>` +
+      keys.filter(k => ICON_SET[k]).map(k => `<div class="icon-opt" data-i="svg:${k}">${iconTileHtml(k, 'sm')}${ICON_SET[k].label}</div>`).join('')).join('');
   box.onclick = e => {
     const o = e.target.closest('.icon-opt'); if (!o) return;
     const inp = document.getElementById(inputId);
@@ -846,7 +980,7 @@ function categoryCardHtml(cat){
       ${iconTileHtml(guessIconKey(cat) || 'generico', 'lg')}
       <div>
         <h3>${escapeHtml(cat)}</h3>
-        <div class="meta">${subs.size} subcategoría${subs.size === 1 ? '' : 's'} · ${cols.length} colección${cols.length === 1 ? '' : 'es'}</div>
+        <div class="meta">${subs.size} subcategoría${subs.size === 1 ? '' : 's'} · ${cols.length} ${cols.length === 1 ? 'colección' : 'colecciones'}</div>
       </div>
     </div>`;
 }
@@ -858,7 +992,7 @@ function subcategoryCardHtml(cat, sub){
       ${iconTileHtml(key, 'lg')}
       <div>
         <h3>${escapeHtml(sub)}</h3>
-        <div class="meta">${cols.length} colección${cols.length === 1 ? '' : 'es'}</div>
+        <div class="meta">${cols.length} ${cols.length === 1 ? 'colección' : 'colecciones'}</div>
       </div>
     </div>`;
 }
@@ -2078,6 +2212,271 @@ function cecaCorta(str){
   return m ? m[1] : str.slice(0, 2);
 }
 
+/* =========================================================================
+   INFORMES → archivo PDF o Excel (ya no se lanzan directamente a impresión;
+   se descargan y, si se quiere, se imprimen desde el propio archivo).
+   Cada informe se construye primero como un "modelo" de datos y ese modelo se
+   convierte después en PDF o en Excel.
+   ========================================================================= */
+function reportFileName(ext){
+  const d = new Date();
+  const f = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  return slugify(currentCollectionMeta.name) + '-' + f + '.' + ext;
+}
+function fechaLarga(){ return new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }); }
+
+function buildGroupedModel(baseItems, paisField, anoField, valorField, cecaField){
+  const total = currentItems.length;
+  const tengo = currentItems.filter(i => i.tengo).length;
+  const paises = buildTwoLevelGroups(baseItems, paisField, anoField, valorField);
+  const rowOf = i => {
+    const valor = valorField ? (i.campos?.[valorField.key] || i.nombre || '') : (i.nombre || '');
+    const cells = [valor];
+    if (cecaField) cells.push(cecaCorta(i.campos?.[cecaField.key]));
+    cells.push(i.codigo || '');
+    return { ok: !!i.tengo, rep: !!i.repetido, cells };
+  };
+  return {
+    title: `${iconPlain(currentCollectionMeta.icon)} ${currentCollectionMeta.name}`.trim(),
+    subtitle: `Informe agrupado por país y año · generado el ${fechaLarga()}` + (baseItems.length !== currentItems.length ? ` · mostrando ${baseItems.length} de ${currentItems.length} (filtro aplicado)` : ''),
+    stats: { total, tengo },
+    groupHeader: paisField ? 'País' : 'Grupo', subHeader: anoField ? 'Año' : null,
+    headers: ['Valor', ...(cecaField ? ['Ceca'] : []), 'Código'],
+    widths: cecaField ? [0, 6, 13] : [0, 13], hasRep: true,
+    groups: paises.map(pg => ({
+      title: pg.pais, count: `(${pg.totalItems})`,
+      subs: pg.subgrupos.map(sg => ({ title: sg.ano ? String(sg.ano) : '', rows: sg.items.map(rowOf) }))
+    }))
+  };
+}
+function buildChecklistModel(baseItems, paisField, anoField, valorField, cecaField){
+  const total = currentItems.length;
+  const tengo = currentItems.filter(i => i.tengo).length;
+  const items = [...baseItems].sort((a, b) => {
+    const ka = itemGroupKey(a, paisField, anoField), kb = itemGroupKey(b, paisField, anoField);
+    if (ka !== kb) return ka.localeCompare(kb, 'es');
+    if (valorField) return parseValorNumerico(a.campos?.[valorField.key]) - parseValorNumerico(b.campos?.[valorField.key]);
+    return 0;
+  });
+  const groups = [];
+  let lastKey = null, cur = null;
+  items.forEach(i => {
+    const key = itemGroupKey(i, paisField, anoField);
+    if (key !== lastKey) {
+      const p = paisField ? (i.campos?.[paisField.key] || '') : '';
+      const a = anoField ? (i.campos?.[anoField.key] || '') : '';
+      cur = { title: [p, a].filter(Boolean).join(' ') || 'Todos', count: '', subs: [{ title: '', rows: [] }] };
+      groups.push(cur); lastKey = key;
+    }
+    const ceca = cecaField ? cecaCorta(i.campos?.[cecaField.key]) : '';
+    const valor = valorField ? (i.campos?.[valorField.key] || i.nombre || '') : (i.nombre || '');
+    cur.subs[0].rows.push({ ok: !!i.tengo, rep: false, cells: [i.codigo || '', valor + (ceca ? ' · ' + ceca : '')] });
+  });
+  return {
+    title: `${iconPlain(currentCollectionMeta.icon)} ${currentCollectionMeta.name}`.trim(),
+    subtitle: `Checklist compacta · ${fechaLarga()} · ${tengo}/${total} conseguidos` + (baseItems.length !== currentItems.length ? ` · mostrando ${baseItems.length} de ${currentItems.length} (filtro aplicado)` : ''),
+    stats: { total, tengo },
+    groupHeader: 'País y año', subHeader: null,
+    headers: ['Código', 'Valor'], widths: [11, 0], hasRep: false, groups
+  };
+}
+function buildSummaryModel(rows, criterio){
+  const porPais = new Map();
+  rows.forEach(r => { if (!porPais.has(r.pais)) porPais.set(r.pais, []); porPais.get(r.pais).push(r); });
+  return {
+    title: `${iconPlain(currentCollectionMeta.icon)} ${currentCollectionMeta.name} — Resumen por valor`.trim(),
+    subtitle: `Generado el ${fechaLarga()} · ${criterio} · agrupado por país y valor (todos los años juntos)`,
+    stats: null,
+    groupHeader: 'País', subHeader: null,
+    headers: ['Valor', 'Año(s) que tienes'], widths: [0, 20], hasRep: false,
+    groups: [...porPais.entries()].map(([pais, rs]) => ({
+      title: pais, count: `(${rs.filter(r => !r.tengo).length} faltan de ${rs.length})`,
+      subs: [{ title: '', rows: rs.map(r => ({ ok: r.tengo, rep: false, cells: [r.valor, r.anos.length ? r.anos.join(', ') : '—'] })) }]
+    }))
+  };
+}
+
+let jsPdfPromise = null;
+function ensureJsPdf(){
+  if (window.jspdf) return Promise.resolve();
+  if (jsPdfPromise) return jsPdfPromise;
+  jsPdfPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+    s.onload = () => resolve();
+    s.onerror = () => { jsPdfPromise = null; reject(new Error('jspdf')); };
+    document.head.appendChild(s);
+  });
+  return jsPdfPromise;
+}
+// Las fuentes estándar del PDF solo cubren Latin-1 (+ €): el resto de letras
+// se sustituye por su letra base sin acento, o "?".
+function pdfSafe(s){
+  return Array.from(String(s ?? '')).map(ch => {
+    const c = ch.codePointAt(0);
+    if (c <= 255 || ch === '€') return ch;
+    const b = ch.normalize('NFD')[0];
+    return b.codePointAt(0) <= 255 ? b : '?';
+  }).join('');
+}
+// PDF apaisado A4 en 4 columnas tipo periódico: denso (pensado para imprimir
+// luego), con texto real seleccionable y casillas ☐/☑ dibujadas.
+function reportToPdf(model){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const W = 297, H = 210, M = 8, GAP = 4, NCOL = 4, LH = 3.5;
+  const colW = (W - 2 * M - GAP * (NCOL - 1)) / NCOL;
+  const bottom = H - M - 4;
+  let col = 0, y = 0, top = 0, cur = { g: null, s: null };
+  const colX = () => M + col * (colW + GAP);
+  const fit = (txt, w) => {
+    txt = pdfSafe(txt);
+    if (doc.getTextWidth(txt) <= w) return txt;
+    while (txt.length > 1 && doc.getTextWidth(txt + '...') > w) txt = txt.slice(0, -1);
+    return txt + '...';
+  };
+
+  // Cabecera de la primera página
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(20);
+  doc.text(fit(model.title, W - 2 * M), M, M + 5);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(100);
+  doc.text(fit(model.subtitle, W - 2 * M), M, M + 10);
+  top = M + 14;
+  if (model.stats) {
+    const { total, tengo } = model.stats, pct = total ? Math.round(tengo / total * 100) : 0;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(30);
+    doc.text(`Total ${total}   ·   Conseguidos ${tengo}   ·   Faltan ${total - tengo}   ·   Progreso ${pct}%`, M, top + 2);
+    doc.setFillColor(235, 235, 235); doc.rect(M, top + 4, W - 2 * M, 1.6, 'F');
+    doc.setFillColor(138, 90, 0); doc.rect(M, top + 4, (W - 2 * M) * pct / 100, 1.6, 'F');
+    top += 10;
+  }
+  y = top;
+
+  const runningHeader = () => {
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(120);
+    doc.text(fit(model.title + ' (continuación)', W - 2 * M), M, M + 2);
+  };
+  const drawGroupTitle = (g, cont) => {
+    doc.setFillColor(43, 35, 32); doc.rect(colX(), y, colW, 4.6, 'F');
+    // El recuento (p. ej. "(3 faltan de 8)") va a la derecha; el título usa el resto.
+    let cw = 0;
+    if (g.count) { doc.setFont('helvetica', 'normal'); doc.setFontSize(7); cw = doc.getTextWidth(pdfSafe(g.count)) + 1.5; }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(255);
+    doc.text(fit(g.title + (cont ? ' (cont.)' : ''), colW - 2.4 - cw), colX() + 1.2, y + 3.3);
+    if (g.count) { doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(224, 190, 90); doc.text(pdfSafe(g.count), colX() + colW - 1.2, y + 3.3, { align: 'right' }); }
+    y += 5.2;
+  };
+  const drawSubTitle = (s) => {
+    if (!s.title) return;
+    doc.setFillColor(85, 72, 58); doc.rect(colX(), y, colW, 3.2, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(255);
+    doc.text(fit(s.title, colW - 2), colX() + 1.2, y + 2.3);
+    y += 3.5;
+  };
+  const nextCol = () => {
+    col++;
+    if (col >= NCOL) { doc.addPage(); col = 0; runningHeader(); top = M + 6; }
+    y = top;
+  };
+  const ensure = (h) => { if (y + h > bottom) { nextCol(); return true; } return false; };
+  const box = (x, yy, ok, green) => {
+    doc.setDrawColor(110); doc.setLineWidth(0.15); doc.rect(x, yy, 2.2, 2.2, 'S');
+    if (ok) { doc.setDrawColor(green ? 47 : 47, green ? 107 : 107, 62); doc.setLineWidth(0.35); doc.line(x + 0.4, yy + 1.2, x + 0.95, yy + 1.8); doc.line(x + 0.95, yy + 1.8, x + 1.9, yy + 0.4); }
+  };
+  const drawRow = (r) => {
+    if (ensure(LH)) {   // si cambia de columna, repite los títulos del grupo
+      drawGroupTitle(cur.g, true); drawSubTitle(cur.s);
+      if (y + LH > bottom) nextCol();
+    }
+    const x = colX();
+    if (r.ok) { doc.setFillColor(243, 249, 243); doc.rect(x, y, colW, LH, 'F'); }
+    doc.setFillColor(r.ok ? 47 : 138, r.ok ? 107 : 47, r.ok ? 62 : 34); doc.rect(x, y, 0.8, LH, 'F');
+    box(x + 1.6, y + 0.65, r.ok, true);
+    let tx = x + 4.6;
+    if (model.hasRep) { box(x + 4.5, y + 0.65, r.rep, true); tx = x + 7.6; }
+    const total = x + colW - 0.8 - tx;
+    const fixed = model.widths.reduce((s, w) => s + w, 0);
+    const flex = Math.max(8, total - fixed);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(6.8);
+    let cx = tx;
+    r.cells.forEach((c, k) => {
+      const w = model.widths[k] || flex;
+      const isCode = k === r.cells.length - 1 && model.widths[k] > 0 && model.headers[k] === 'Código';
+      doc.setTextColor(isCode ? 110 : 25);
+      doc.text(fit(c, w - 0.8), cx, y + 2.5);
+      cx += w;
+    });
+    doc.setDrawColor(235); doc.setLineWidth(0.1); doc.line(x, y + LH, x + colW, y + LH);
+    y += LH;
+  };
+
+  model.groups.forEach(g => {
+    const firstSub = g.subs[0];
+    ensure(5.2 + (firstSub && firstSub.title ? 3.5 : 0) + LH * 2);
+    cur = { g, s: firstSub };
+    drawGroupTitle(g, false);
+    g.subs.forEach((s, si) => {
+      cur.s = s;
+      if (si > 0) ensure(3.5 + LH * 2);
+      drawSubTitle(s);
+      s.rows.forEach(drawRow);
+    });
+    y += 2.2;
+  });
+
+  // Pie con número de página
+  const n = doc.getNumberOfPages();
+  for (let p = 1; p <= n; p++) {
+    doc.setPage(p); doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(130);
+    doc.text(`Página ${p} de ${n}`, W / 2, H - 4, { align: 'center' });
+  }
+  doc.save(reportFileName('pdf'));
+  return n;
+}
+
+async function reportToXlsx(model){
+  await ensureSheetJs();
+  const hdr = [model.groupHeader, ...(model.subHeader ? [model.subHeader] : []), 'Tengo', ...(model.hasRep ? ['Repe'] : []), ...model.headers];
+  const aoa = [hdr];
+  model.groups.forEach(g => g.subs.forEach(s => s.rows.forEach(r =>
+    aoa.push([g.title, ...(model.subHeader ? [s.title] : []), r.ok ? 'Sí' : 'No', ...(model.hasRep ? [r.rep ? 'Sí' : 'No'] : []), ...r.cells]))));
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = hdr.map((h, i) => ({ wch: Math.min(40, Math.max(String(h).length + 2, ...aoa.slice(1, 300).map(r => String(r[i] ?? '').length + 2))) }));
+  ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: aoa.length - 1, c: hdr.length - 1 } }) };
+  const info = [[model.title], [model.subtitle]];
+  if (model.stats) {
+    const { total, tengo } = model.stats;
+    info.push([], ['Total', total], ['Conseguidos', tengo], ['Faltan', total - tengo], ['Progreso (%)', total ? Math.round(tengo / total * 100) : 0]);
+  }
+  const wsInfo = XLSX.utils.aoa_to_sheet(info);
+  wsInfo['!cols'] = [{ wch: 28 }, { wch: 14 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, wsInfo, 'Resumen');
+  XLSX.utils.book_append_sheet(wb, ws, 'Informe');
+  XLSX.writeFile(wb, reportFileName('xlsx'));
+}
+
+async function deliverReport(model, fmt){
+  try {
+    showToast(fmt === 'xlsx' ? 'Generando el Excel...' : 'Generando el PDF...');
+    if (fmt === 'xlsx') await reportToXlsx(model);
+    else { await ensureJsPdf(); reportToPdf(model); }
+    showToast(fmt === 'xlsx' ? 'Excel descargado' : 'PDF descargado');
+  } catch (e) {
+    console.error(e);
+    showToast('No se pudo generar el archivo. Comprueba la conexión e inténtalo de nuevo.');
+  }
+}
+// Pregunta el formato (PDF / Excel) en una ventanita; devuelve 'pdf', 'xlsx' o null.
+let _fmtResolve = null;
+function askReportFormat(){
+  return new Promise(res => { _fmtResolve = res; openModal('modal-pick-format'); });
+}
+window.pickFormat = f => {
+  closeModal('modal-pick-format');
+  if (_fmtResolve) { _fmtResolve(f); _fmtResolve = null; }
+};
+
 function generateReport(modo){
   const fields = currentCollectionMeta.fields || [];
   const paisField = findFieldByHints(fields, ['pais', 'país']);
@@ -2085,13 +2484,13 @@ function generateReport(modo){
   const valorField = findFieldByHints(fields, ['denominacion', 'denominación', 'valor']);
   const cecaField = findFieldByHints(fields, ['ceca']);
   const soloFiltrado = document.getElementById('report-solo-filtrado').checked;
+  const fmt = (document.querySelector('input[name="rep-fmt"]:checked') || {}).value || 'pdf';
   if (document.getElementById('report-save-snap').checked) saveSnapshot(false);
   const baseItems = soloFiltrado ? lastFilteredItems : currentItems;
-
-  if (modo === 'checklist') renderChecklistReport(baseItems, paisField, anoField, valorField, cecaField);
-  else renderGroupedReport(baseItems, paisField, anoField, valorField, cecaField);
-
-  setTimeout(() => window.print(), 250);
+  const model = modo === 'checklist'
+    ? buildChecklistModel(baseItems, paisField, anoField, valorField, cecaField)
+    : buildGroupedModel(baseItems, paisField, anoField, valorField, cecaField);
+  deliverReport(model, fmt);
 }
 window.generateReport = generateReport;
 
@@ -2150,45 +2549,26 @@ function buildValuePaisSummary(){
   rows.sort((a, b) => a.pais.localeCompare(b.pais, 'es') || parseValorNumerico(a.valor) - parseValorNumerico(b.valor));
   return rows;
 }
+// "Por conseguir" = cuántos elementos NO están marcados como «tengo» entre los
+// que dejan pasar los filtros de país, año, valor... y la búsqueda. Ejemplo:
+// filtrando Francia + 2015 cuenta las monedas de Francia de 2015 sin marcar.
+// El filtro «Estado» no cuenta aquí (si no, con «Tengo» activo saldría siempre 0).
 function renderSummaryCounter(){
   const el = document.getElementById('summary-counter');
   if (currentCollectionMeta.type !== 'checklist') { el.style.display = 'none'; return; }
-  const rows = buildValuePaisSummary();
-  if (!rows) { el.style.display = 'none'; return; }
-  const faltan = rows.filter(r => !r.tengo).length;
+  const enAlcance = scopedItemsSinEstado();
+  const faltan = enAlcance.filter(i => !i.tengo).length;
   el.style.display = '';
-  el.innerHTML = `<b style="color:${faltan ? 'var(--red)' : 'var(--green)'};">${faltan}</b> valores por conseguir`;
+  el.innerHTML = `<b style="color:${faltan ? 'var(--red)' : 'var(--green)'};">${faltan}</b> por conseguir <small>de ${enAlcance.length} en esta vista</small>`;
 }
-document.getElementById('btn-summary-report').onclick = () => {
+document.getElementById('btn-summary-report').onclick = async () => {
   const rows = buildValuePaisSummary();
   if (!rows) { showToast('Esta colección no tiene un campo de valor/denominación detectable'); return; }
   if (!rows.length) { showToast('No hay nada que mostrar con los filtros actuales'); return; }
-  const fecha = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
-  const porPais = new Map();
-  rows.forEach(r => { if (!porPais.has(r.pais)) porPais.set(r.pais, []); porPais.get(r.pais).push(r); });
   const criterio = filterState.__estado === 'tengo' ? 'Solo valores conseguidos (al menos un año)' : filterState.__estado === 'falta' ? 'Solo valores que faltan (ningún año conseguido)' : 'Todos los valores';
-
-  document.getElementById('print-area').innerHTML = `
-    <div class="preport-header">
-      <h1>${escapeHtml(iconPlain(currentCollectionMeta.icon))} ${escapeHtml(currentCollectionMeta.name)} — Resumen por valor</h1>
-      <p class="psub">Generado el ${fecha} · ${escapeHtml(criterio)} · agrupado por país y valor (todos los años juntos)</p>
-    </div>
-    <div class="pcountries">
-      ${[...porPais.entries()].map(([pais, rs]) => `
-        <div class="pcountry">
-          <div class="pcountry-title">${escapeHtml(pais)} <span class="pcountry-count">(${rs.filter(r=>!r.tengo).length} faltan de ${rs.length})</span></div>
-          <table class="ptable">
-            <thead><tr><th>T</th><th>Valor</th><th>Año(s) que tienes</th></tr></thead>
-            <tbody>${rs.map(r => `<tr class="${r.tengo ? 'rowok' : 'rowfalta'}">
-              <td class="chk">${r.tengo ? '☑' : '☐'}</td>
-              <td>${escapeHtml(r.valor)}</td>
-              <td class="pcode">${r.anos.length ? escapeHtml(r.anos.join(', ')) : '—'}</td>
-            </tr>`).join('')}</tbody>
-          </table>
-        </div>`).join('')}
-    </div>
-  `;
-  setTimeout(() => window.print(), 250);
+  const fmt = await askReportFormat();
+  if (!fmt) return;
+  deliverReport(buildSummaryModel(rows, criterio), fmt);
 };
 
 
@@ -2222,125 +2602,6 @@ function buildTwoLevelGroups(items, paisField, anoField, valorField){
     const totalItems = subgrupos.reduce((s, g) => s + g.items.length, 0);
     return { pais, subgrupos, totalItems };
   });
-}
-
-function renderGroupedReport(baseItems, paisField, anoField, valorField, cecaField){
-  const total = currentItems.length;
-  const tengo = currentItems.filter(i => i.tengo).length;
-  const pct = total ? Math.round((tengo/total)*100) : 0;
-  const fecha = new Date().toLocaleDateString('es-ES', { day:'2-digit', month:'long', year:'numeric' });
-  const paisesGrupos = buildTwoLevelGroups(baseItems, paisField, anoField, valorField);
-
-  const rowsHtml = (its) => its.map(i => {
-    const ceca = cecaField ? cecaCorta(i.campos?.[cecaField.key]) : '';
-    const valor = valorField ? (i.campos?.[valorField.key] || i.nombre || '') : (i.nombre || '');
-    return `<tr class="${i.tengo ? 'rowok' : 'rowfalta'}">
-      <td class="chk">${i.tengo ? '☑' : '☐'}</td>
-      <td class="chk">${i.repetido ? '☑' : '☐'}</td>
-      <td>${escapeHtml(valor)}</td>
-      ${cecaField ? `<td class="cceca">${escapeHtml(ceca)}</td>` : ''}
-      <td class="pcode">${escapeHtml(i.codigo || '')}</td>
-    </tr>`;
-  }).join('');
-
-  // Tamaño dinámico: los países con más monedas ocupan más "hueco" en la
-  // cuadrícula (grid-column: span N sobre una base de 4 columnas), y por
-  // dentro usan más columnas para aprovechar ese espacio extra. Los países
-  // con pocos datos (ej. Ciudad del Vaticano) quedan compactos.
-  const spanForPais = (pg) => {
-    const n = pg.totalItems;
-    if (n <= 4) return 1;
-    if (n <= 12) return 2;
-    if (n <= 30) return 3;
-    return 4;
-  };
-  const innerColsForSpan = (span) => span >= 3 ? 3 : span;
-
-  const paisBlockHtml = (pg) => {
-    const span = spanForPais(pg);
-    const innerCols = innerColsForSpan(span);
-    return `
-    <div class="pcountry" style="grid-column:span ${span};">
-      <div class="pcountry-title">${escapeHtml(pg.pais)} <span class="pcountry-count">(${pg.totalItems})</span></div>
-      <div class="pcountry-inner" style="grid-template-columns:repeat(${innerCols},1fr);">
-        ${pg.subgrupos.map(sg => `
-          <div class="pgroup">
-            ${sg.ano ? `<div class="pgroup-title">${escapeHtml(String(sg.ano))}</div>` : ''}
-            <table class="ptable">
-              <thead><tr><th>T</th><th>R</th><th>Valor</th>${cecaField?'<th>Ceca</th>':''}<th>Código</th></tr></thead>
-              <tbody>${rowsHtml(sg.items)}</tbody>
-            </table>
-          </div>`).join('')}
-      </div>
-    </div>`;
-  };
-
-  document.getElementById('print-area').innerHTML = `
-    <div class="preport-header">
-      <h1>${escapeHtml(iconPlain(currentCollectionMeta.icon))} ${escapeHtml(currentCollectionMeta.name)}</h1>
-      <p class="psub">Informe generado el ${fecha}${baseItems.length !== currentItems.length ? ` — mostrando ${baseItems.length} de ${currentItems.length} (filtro aplicado)` : ''}</p>
-      <div class="psummary">
-        <div><b>${total}</b><span>Total</span></div>
-        <div><b>${tengo}</b><span>Conseguidos</span></div>
-        <div><b>${total-tengo}</b><span>Faltan</span></div>
-        <div><b>${pct}%</b><span>Progreso</span></div>
-      </div>
-      <div class="pbar"><div style="width:${pct}%;"></div></div>
-    </div>
-    <div class="pcountries">
-      ${paisesGrupos.map(paisBlockHtml).join('')}
-    </div>
-  `;
-}
-
-function renderChecklistReport(baseItems, paisField, anoField, valorField, cecaField){
-  const total = currentItems.length;
-  const tengo = currentItems.filter(i => i.tengo).length;
-  const fecha = new Date().toLocaleDateString('es-ES', { day:'2-digit', month:'long', year:'numeric' });
-
-  let items = [...baseItems];
-  items.sort((a, b) => {
-    const ka = itemGroupKey(a, paisField, anoField), kb = itemGroupKey(b, paisField, anoField);
-    if (ka !== kb) return ka.localeCompare(kb, 'es');
-    if (valorField) return parseValorNumerico(a.campos?.[valorField.key]) - parseValorNumerico(b.campos?.[valorField.key]);
-    return 0;
-  });
-
-  const groups = [];
-  let lastKey = null, currentGroup = null;
-  items.forEach(i => {
-    const key = itemGroupKey(i, paisField, anoField);
-    if (key !== lastKey) {
-      const p = paisField ? (i.campos?.[paisField.key] || '') : '';
-      const a = anoField ? (i.campos?.[anoField.key] || '') : '';
-      currentGroup = { titulo: [p, a].filter(Boolean).join(' ') || 'Todos', items: [] };
-      groups.push(currentGroup);
-      lastKey = key;
-    }
-    currentGroup.items.push(i);
-  });
-
-  document.getElementById('print-area').innerHTML = `
-    <div class="cl-header">
-      <h1>${escapeHtml(iconPlain(currentCollectionMeta.icon))} ${escapeHtml(currentCollectionMeta.name)}</h1>
-      <p>Checklist — ${fecha} — ${tengo}/${total} conseguidos${baseItems.length !== currentItems.length ? ` — mostrando ${baseItems.length} de ${currentItems.length} (filtro aplicado)` : ''}</p>
-    </div>
-    <div class="cl-grid">
-      ${groups.map(g => `
-        <div class="cl-group">
-          <div class="cl-group-title">${escapeHtml(g.titulo)}</div>
-          ${g.items.map(i => {
-            const ceca = cecaField ? cecaCorta(i.campos?.[cecaField.key]) : '';
-            const valor = valorField ? (i.campos?.[valorField.key] || i.nombre || '') : (i.nombre || '');
-            return `<div class="cl-cell ${i.tengo ? 'ok' : ''}">
-              <span class="cl-box">${i.tengo ? '✔' : ''}</span>
-              <span class="cl-code">${escapeHtml(i.codigo||'')}</span>
-              <span class="cl-name">${escapeHtml(valor)}${ceca ? ' · '+escapeHtml(ceca) : ''}</span>
-            </div>`;
-          }).join('')}
-        </div>`).join('')}
-    </div>
-  `;
 }
 
 /* =========================================================================
