@@ -4,36 +4,71 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mis Colecciones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
+  /* Diseño "álbum": fondo crema, tarjetas blancas redondeadas, un color por
+     colección. Los nombres de variable se conservan (ink = fondo de página,
+     panel = tarjetas, brass = acento) para que todo el CSS existente siga
+     funcionando. En modo oscuro del sistema se usa la paleta oscura. */
   :root{
-    --ink:#14110f; --panel:#1e1a16; --panel2:#26201a; --border:#3a3128;
-    --text:#ede6d6; --muted:#9c9284; --brass:#c9a227; --brass-dark:#9c7d1c;
-    --copper:#b0703f; --green:#7fae6a; --red:#c1594a; --blue:#7a9bc2;
+    --ink:#FAF7F2; --panel:#FFFFFF; --panel2:#F3EEE4; --border:#E6DFD2;
+    --text:#22201C; --muted:#6A6358; --brass:#8A5A00; --brass-dark:#6E4700;
+    --copper:#B4440F; --green:#2E7A1F; --red:#A12A22; --blue:#1F5FA8;
+    --btn-bg:#22201C; --btn-fg:#FAF7F2;
+    --font-title:"Fraunces",Georgia,"Iowan Old Style",serif;
+    --font-body:"DM Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ink:#14110f; --panel:#1e1a16; --panel2:#26201a; --border:#3a3128;
+      --text:#ede6d6; --muted:#a79d8e; --brass:#d8b13a; --brass-dark:#b8932a;
+      --copper:#d98a57; --green:#8fc27a; --red:#e07a6a; --blue:#8fb2d9;
+      --btn-bg:#ede6d6; --btn-fg:#14110f;
+    }
+    .ico-tile{background:color-mix(in srgb,var(--if) 24%,var(--panel2))!important;color:color-mix(in srgb,var(--if) 40%,#fff)!important;}
   }
   *{box-sizing:border-box;}
   html,body{height:100%;}
   body{
     margin:0; background:var(--ink); color:var(--text);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    font-family:var(--font-body);
     padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
   }
-  h1,h2,h3{font-family:Georgia,"Iowan Old Style","Palatino Linotype",serif; font-weight:600; margin:0;}
+  h1,h2,h3{font-family:var(--font-title); font-weight:600; margin:0;}
+
+  /* Iconos de colección: baldosa de color suave con el dibujo del objeto. */
+  .ico-tile{display:inline-flex;align-items:center;justify-content:center;flex:none;background:var(--ib);color:var(--if);line-height:1;}
+  .ico-tile svg{display:block;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;}
+  .ico-tile.lg{width:60px;height:60px;border-radius:18px;} .ico-tile.lg svg{width:38px;height:38px;}
+  .ico-tile.md{width:46px;height:46px;border-radius:14px;} .ico-tile.md svg{width:30px;height:30px;}
+  .ico-tile.sm{width:38px;height:38px;border-radius:12px;} .ico-tile.sm svg{width:24px;height:24px;}
+  .ico-tile.emoji{font-size:1.7rem;}
+  .ico-tile.md.emoji{font-size:1.4rem;}
+  .icon-picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:8px;margin-top:6px;}
+  .icon-opt{display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 4px;border:2px solid transparent;border-radius:14px;background:var(--panel2);cursor:pointer;font-size:.68rem;color:var(--muted);text-align:center;}
+  .icon-opt:hover{border-color:var(--border);}
+  .icon-opt.on{border-color:var(--text);color:var(--text);font-weight:700;}
+  .icon-opt .ico-tile.sm svg{width:24px;height:24px;}
+  .title-with-icon{display:inline-flex;align-items:center;gap:12px;}
+  .brand{display:inline-flex;align-items:center;gap:10px;}
   a{color:var(--brass);}
   .wrap{max-width:1100px;margin:0 auto;padding:20px 16px 60px;}
   header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);}
-  header.top h1{font-size:1.3rem;letter-spacing:.02em;color:var(--brass);}
+  header.top h1{font-size:1.45rem;letter-spacing:-.01em;color:var(--text);}
   header.top .sub{font-size:.75rem;color:var(--muted);}
   .userbox{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--muted);}
   .userbox img{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);}
 
   .btn{
     background:var(--panel2); color:var(--text); border:1px solid var(--border);
-    padding:9px 14px; border-radius:8px; font-size:.85rem; cursor:pointer;
+    padding:9px 16px; border-radius:999px; font-size:.85rem; cursor:pointer; font-family:inherit; font-weight:500;
     display:inline-flex; align-items:center; gap:6px; white-space:nowrap;
   }
-  .btn:hover{border-color:var(--brass);}
-  .btn.primary{background:var(--brass); color:#1c1508; border-color:var(--brass); font-weight:600;}
-  .btn.primary:hover{background:var(--brass-dark);}
+  .btn:hover{border-color:var(--text);}
+  .btn.primary{background:var(--btn-bg); color:var(--btn-fg); border-color:var(--btn-bg); font-weight:700;}
+  .btn.primary:hover{opacity:.88;}
   .btn.danger{background:transparent;border-color:var(--red);color:var(--red);}
   .btn.small{padding:5px 9px;font-size:.72rem;}
   .btn:disabled{opacity:.5;cursor:not-allowed;}
@@ -53,7 +88,7 @@
 
   /* ---------- Login ---------- */
   #view-login{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center;padding:20px;}
-  #view-login h1{font-size:2rem;color:var(--brass);}
+  #view-login h1{font-size:2.4rem;color:var(--text);letter-spacing:-.01em;}
   #view-login p{color:var(--muted);max-width:360px;font-size:.92rem;}
   .google-btn{display:flex;align-items:center;gap:10px;background:#fff;color:#1c1c1c;border:none;border-radius:8px;padding:11px 22px;font-size:.95rem;font-weight:600;cursor:pointer;}
 
@@ -61,22 +96,21 @@
   .crumbs{font-size:.82rem;color:var(--muted);padding:12px 0;}
   .crumbs a{cursor:pointer;text-decoration:none;}
   .grid-cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-top:16px;}
-  .col-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:border-color .15s;}
-  .col-card:hover{border-color:var(--brass);}
-  .col-card .icon{font-size:1.8rem;}
-  .col-card h3{font-size:1.02rem;margin:8px 0 4px;}
-  .col-card .meta{font-size:.75rem;color:var(--muted);}
-  .col-card .bar{height:6px;background:var(--panel2);border-radius:3px;overflow:hidden;margin-top:10px;}
-  .col-card .bar > div{height:100%;background:linear-gradient(90deg,var(--copper),var(--brass));}
+  .col-card{background:var(--panel);border:1px solid var(--border);border-radius:22px;padding:18px;cursor:pointer;transition:border-color .15s,transform .15s;display:flex;flex-direction:column;gap:12px;}
+  .col-card:hover{border-color:var(--text);transform:translateY(-2px);}
+  .col-card h3{font-size:1.15rem;margin:0 0 3px;}
+  .col-card .meta{font-size:.78rem;color:var(--muted);}
+  .col-card .bar{height:6px;background:var(--panel2);border-radius:99px;overflow:hidden;margin-top:12px;}
+  .col-card .bar > div{height:100%;border-radius:99px;background:var(--bar,var(--brass));}
   .empty-state{text-align:center;padding:50px 20px;color:var(--muted);border:1px dashed var(--border);border-radius:12px;margin-top:20px;}
 
   /* ---------- Toolbar colección ---------- */
   .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0;}
-  .toolbar .stat{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:.8rem;}
+  .toolbar .stat{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:8px 14px;font-size:.8rem;}
   .toolbar .stat b{font-size:1.05rem;color:var(--brass);display:block;}
   .detail-header-row{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:14px 0 10px;}
   .stats-inline{display:flex;gap:10px;flex-wrap:wrap;}
-  .stats-inline .stat{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:.75rem;text-align:center;min-width:64px;}
+  .stats-inline .stat{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:6px 12px;font-size:.75rem;text-align:center;min-width:64px;}
   .stats-inline .stat b{font-size:1rem;color:var(--brass);display:block;line-height:1.2;}
   .filter-select{max-width:180px;}
   .filter-select.active{border-color:var(--brass);color:var(--brass);}
@@ -87,7 +121,7 @@
   .searchbar{flex:1;min-width:160px;}
 
   /* ---------- Tabla checklist ---------- */
-  .table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;-webkit-overflow-scrolling:touch;max-height:70vh;overflow-y:auto;}
+  .table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:18px;-webkit-overflow-scrolling:touch;max-height:70vh;overflow-y:auto;}
   table{border-collapse:collapse;width:100%;font-size:.83rem;}
   thead th{position:sticky;top:0;background:var(--panel2);text-align:left;padding:9px 10px;font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);z-index:2;}
   tbody td{padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap;}
@@ -100,7 +134,7 @@
 
   /* ---------- Tarjetas libres (ficha moderna) ---------- */
   .card-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;margin-top:14px;}
-  .item-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .15s,transform .15s;}
+  .item-card{background:var(--panel);border:1px solid var(--border);border-radius:22px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .15s,transform .15s;}
   .item-card:hover{border-color:var(--brass);transform:translateY(-2px);}
   .item-card .card-photo{height:150px;background:var(--panel2);overflow:hidden;cursor:pointer;}
   .item-card .card-photo img.thumb{width:100%;height:100%;object-fit:cover;display:block;}
@@ -115,7 +149,7 @@
 
   /* ---------- Ficha completa (detalle de un elemento libre) ---------- */
   .ficha-photo{width:100%;max-height:320px;object-fit:cover;border-radius:10px;margin-bottom:16px;display:block;background:var(--panel2);}
-  .ficha-title{font-size:1.25rem;color:var(--brass);margin-bottom:2px;}
+  .ficha-title{font-size:1.4rem;color:var(--text);margin-bottom:2px;}
   .ficha-sub{font-size:.85rem;color:var(--muted);margin-bottom:18px;}
   .ficha-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px 18px;margin-bottom:18px;}
   .ficha-grid .fitem b{display:block;font-size:.66rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:3px;}
@@ -142,8 +176,8 @@
   /* ---------- Modal ---------- */
   .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:16px;}
   .backdrop.open{display:flex;}
-  .modal{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:22px;max-width:520px;width:100%;max-height:88vh;overflow-y:auto;}
-  .modal h2{font-size:1.15rem;margin-bottom:16px;color:var(--brass);}
+  .modal{background:var(--panel);border:1px solid var(--border);border-radius:24px;padding:24px;max-width:520px;width:100%;max-height:88vh;overflow-y:auto;}
+  .modal h2{font-size:1.3rem;margin-bottom:16px;color:var(--text);}
   .modal-close{float:right;background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;}
   .option-row{display:flex;flex-direction:column;gap:10px;margin:14px 0;}
   .option-btn{text-align:left;background:var(--panel2);border:1px solid var(--border);border-radius:9px;padding:12px 14px;cursor:pointer;}
@@ -261,7 +295,7 @@
 <!-- ============== LOGIN ============== -->
 <div id="view-login">
   <div>
-    <h1>📚 Mis Colecciones</h1>
+    <h1><span class="brand"><span class="ico-tile md" style="--ib:#E7E1F8;--if:#4B34A6;" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="6" y="7" width="15" height="19" rx="2.5" transform="rotate(-9 13.5 16.5)"/><rect x="11" y="6" width="15" height="20" rx="2.5" fill="currentColor" fill-opacity="0.16"/><path d="M18.5 11.5l1.3 2.7 3 .4-2.2 2.1.5 3-2.6-1.4-2.6 1.4.5-3-2.2-2.1 3-.4z"/></svg></span>Mis Colecciones</span></h1>
     <p>Catalogación y seguimiento de cromos, monedas y objetos de colección, sincronizado entre todos tus dispositivos.</p>
   </div>
   <button class="google-btn" id="btn-google">
@@ -275,7 +309,7 @@
 <div id="view-app" style="display:none;">
   <header class="top">
     <div>
-      <h1>📚 Mis Colecciones</h1>
+      <h1><span class="brand"><span class="ico-tile sm" style="--ib:#E7E1F8;--if:#4B34A6;" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="6" y="7" width="15" height="19" rx="2.5" transform="rotate(-9 13.5 16.5)"/><rect x="11" y="6" width="15" height="20" rx="2.5" fill="currentColor" fill-opacity="0.16"/><path d="M18.5 11.5l1.3 2.7 3 .4-2.2 2.1.5 3-2.6-1.4-2.6 1.4.5-3-2.2-2.1 3-.4z"/></svg></span>Mis Colecciones</span></h1>
       <div class="sub">Catalogación y seguimiento</div>
     </div>
     <div class="userbox">
@@ -307,7 +341,7 @@
     <!-- Vista: detalle de una colección -->
     <div id="view-detail" style="display:none;">
       <div class="detail-header-row">
-        <h2 id="detail-title" style="font-size:1.3rem;color:var(--brass);"></h2>
+        <h2 id="detail-title" style="font-size:1.6rem;color:var(--text);"></h2>
         <div class="stats-inline" style="align-items:center;">
           <div id="detail-stats" class="stats-inline"></div>
           <div class="stat" id="valor-total-stat" style="display:none;"></div>
@@ -340,8 +374,8 @@
     <button class="modal-close" onclick="closeModal('modal-new-collection')">✕</button>
     <h2>Nueva colección</h2>
     <div class="field"><label>Nombre de la colección</label><input id="nc-name" placeholder="Ej. Cajas metálicas antiguas"></div>
-    <div class="field"><label>Icono</label><input id="nc-icon" maxlength="2" value="📦" style="width:80px;">
-      <div class="chips" id="nc-icons"></div></div>
+    <div class="field"><label>Icono</label><input id="nc-icon" type="hidden" value="">
+      <div class="icon-picker" id="nc-icons"></div></div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
       <div class="field" style="flex:1;min-width:160px;"><label>Categoría (opcional)</label><input id="nc-categoria" list="dl-categorias" placeholder="Ej. CROMOS"></div>
       <div class="field" style="flex:1;min-width:160px;"><label>Subcategoría (opcional)</label><input id="nc-subcategoria" list="dl-subcategorias" placeholder="Ej. Deportes (Ligas)"></div>
@@ -404,7 +438,8 @@
     <button class="modal-close" onclick="closeModal('modal-settings')">✕</button>
     <h2>Ajustes de la colección</h2>
     <div class="field"><label>Nombre</label><input id="set-name"></div>
-    <div class="field"><label>Icono</label><input id="set-icon" maxlength="2" style="width:80px;"></div>
+    <div class="field"><label>Icono</label><input id="set-icon" type="hidden">
+      <div class="icon-picker" id="set-icons"></div></div>
     <div class="field" id="set-valor-fijo-wrap" style="display:none;">
       <label>Valor facial fijo (opcional)</label>
       <input id="set-valor-fijo" placeholder="Ej: 2 € — déjalo vacío si cada elemento tiene su propio valor">
@@ -657,9 +692,12 @@ function openCollection(cid){
   document.getElementById('view-list').style.display = 'none';
   document.getElementById('view-detail').style.display = 'block';
   renderCrumbs(currentCollectionMeta);
-  document.getElementById('detail-title').textContent =
-    `${currentCollectionMeta.icon || '📚'} ${currentCollectionMeta.name}`;
+  renderDetailTitle();
   listenItems(cid);
+}
+function renderDetailTitle(){
+  document.getElementById('detail-title').innerHTML =
+    `<span class="title-with-icon">${collectionIconHtml(currentCollectionMeta, 'md')}<span>${escapeHtml(currentCollectionMeta.name)}</span></span>`;
 }
 window.openCollection = openCollection;
 
@@ -677,6 +715,7 @@ function listenCollections(){
       // cualquier cambio hecho en Ajustes (valor fijo, campos, nombre...)
       // sin esperar a otra acción que recalcule las estadísticas.
       if (document.getElementById('view-detail').style.display !== 'none') {
+        renderDetailTitle(); renderCrumbs(currentCollectionMeta);
         renderDetailStats(); renderFiltersBar(); renderDetailBody(); renderSummaryCounter(); renderValorTotal();
       }
     }
@@ -694,16 +733,106 @@ function updateCategoryDatalists(){
   if (dlSub) dlSub.innerHTML = subs.map(s => `<option value="${escapeHtml(s)}">`).join('');
 }
 
+/* =========================================================================
+   ICONOS DE COLECCIÓN
+   Cada colección se identifica con el dibujo de su objeto (moneda, balón,
+   claqueta...) y un color propio. En la base de datos el campo `icon` guarda
+   "svg:<clave>". Las colecciones antiguas (con un emoji) se reconocen por su
+   nombre/subcategoría; si no hay coincidencia se sigue mostrando su emoji.
+   ========================================================================= */
+const ICON_SET = {
+  euro:     { label: 'Euros',            bg: '#FBEBC8', fg: '#8A5A00', svg: '<circle cx="16" cy="16" r="12" fill="currentColor" fill-opacity="0.16"/><path d="M20.5 11.5a6 6 0 1 0 0 9"/><path d="M10.5 14.5h8M10.5 17.5h8"/>' },
+  mundo:    { label: 'Monedas del mundo',bg: '#D5EFEA', fg: '#0B6B63', svg: '<circle cx="16" cy="16" r="12" fill="currentColor" fill-opacity="0.16"/><circle cx="16" cy="16" r="6.5"/><ellipse cx="16" cy="16" rx="3" ry="6.5"/><path d="M9.5 16h13"/>' },
+  billete:  { label: 'Billetes',         bg: '#E2EFD9', fg: '#3F6B1E', svg: '<rect x="3" y="8" width="26" height="16" rx="2" fill="currentColor" fill-opacity="0.16"/><circle cx="16" cy="16" r="3.5"/><path d="M7 12v.01M25 20v.01"/>' },
+  sello:    { label: 'Sellos',           bg: '#F3E6D3', fg: '#7A4B1E', svg: '<rect x="6" y="5" width="20" height="22" rx="1.5" fill="currentColor" fill-opacity="0.16" stroke-dasharray="1.5 2.5"/><rect x="10" y="9" width="12" height="14" rx="1"/><path d="M10 20l4-4 3 3 2-2 3 3"/>' },
+  cromos:   { label: 'Cromos',           bg: '#E7E1F8', fg: '#4B34A6', svg: '<rect x="6" y="7" width="15" height="19" rx="2.5" transform="rotate(-9 13.5 16.5)"/><rect x="11" y="6" width="15" height="20" rx="2.5" fill="currentColor" fill-opacity="0.16"/><path d="M18.5 11.5l1.3 2.7 3 .4-2.2 2.1.5 3-2.6-1.4-2.6 1.4.5-3-2.2-2.1 3-.4z"/>' },
+  d20:      { label: 'Fantasía y Rol',   bg: '#EADCF5', fg: '#6B2D9B', svg: '<path d="M16 4l10 6v12l-10 6-10-6V10z" fill="currentColor" fill-opacity="0.16"/><path d="M16 9.5l6 10.5H10z"/><path d="M16 4v5.5M10 20L6 22M22 20l4 2"/>' },
+  balon:    { label: 'Fútbol (ligas)',   bg: '#DDF0D6', fg: '#2E7A1F', svg: '<circle cx="16" cy="16" r="12" fill="currentColor" fill-opacity="0.16"/><path d="M16 11l4.5 3.3-1.7 5.2h-5.6l-1.7-5.2z"/><path d="M16 11V4.5M20.5 14.3l6-2M18.8 19.5l3.8 5M13.2 19.5l-3.8 5M11.5 14.3l-6-2"/>' },
+  escudo:   { label: 'Selecciones',      bg: '#F9DCD8', fg: '#A12A22', svg: '<path d="M16 4l9 3.5v7c0 6-4 10-9 13-5-3-9-7-9-13v-7z" fill="currentColor" fill-opacity="0.16"/><path d="M16 11l1.5 3 3.3.5-2.4 2.3.6 3.2-3-1.6-3 1.6.6-3.2-2.4-2.3 3.3-.5z"/>' },
+  claqueta: { label: 'Cine y animación', bg: '#D9E7F8', fg: '#1F5FA8', svg: '<rect x="5" y="13.5" width="22.5" height="13" rx="2" fill="currentColor" fill-opacity="0.16"/><path d="M4.2 9L27 5l.8 4.6L5 13.5z"/><path d="M10 8.2l1.6 4M16 7.2l1.6 4M22 6.2l1.6 4"/><path d="M14 17.5l5 3-5 3z"/>' },
+  comic:    { label: 'Cómics y héroes',  bg: '#FDE0CC', fg: '#B4440F', svg: '<path d="M6 6h20a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H15l-6 5v-5H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" fill="currentColor" fill-opacity="0.16"/><path d="M17.5 9l-4.5 6.5h4.5L14 21"/>' },
+  manzana:  { label: 'Alimentos / otros',bg: '#F8DCE8', fg: '#A3205E', svg: '<path d="M16 9c-2-2-7-1.5-7 4.5 0 5 3 10.5 7 10.5s7-5.5 7-10.5c0-6-5-6.5-7-4.5z" fill="currentColor" fill-opacity="0.16"/><path d="M16 9c0-2 1.2-3.8 3.5-4.5"/>' },
+  generico: { label: 'Otra colección',   bg: '#E8E4DA', fg: '#4A453C', svg: '<path d="M4 10l12-6 12 6v12l-12 6-12-6z" fill="currentColor" fill-opacity="0.16"/><path d="M4 10l12 6 12-6M16 16v12"/>' }
+};
+// Reglas para reconocer una colección antigua por su texto (ya sin tildes).
+const ICON_GUESS_RULES = [
+  [/sello|filateli/, 'sello'], [/billete/, 'billete'],
+  [/liga|futbol|laliga/, 'balon'], [/selecci/, 'escudo'],
+  [/fantas|\brol\b|rider|dungeon|d&d/, 'd20'],
+  [/cine|animaci|ficci|disney|harry|dragon|pelicula/, 'claqueta'],
+  [/comic|superh|marvel|\bdc\b|villano|heroe/, 'comic'],
+  [/alimento|trivia|comida|\botros\b/, 'manzana'],
+  [/\beuros?\b/, 'euro'], [/mundo|world|moned|coin|numism/, 'mundo'],
+  [/cromo|sticker|panini|album/, 'cromos']
+];
+function guessIconKey(...texts){
+  for (const t of texts) {
+    if (!t) continue;
+    const s = norm(t);
+    for (const [re, key] of ICON_GUESS_RULES) if (re.test(s)) return key;
+  }
+  return null;
+}
+// Clave de icono SVG de una colección (elegida o deducida), o null → emoji.
+function iconKeyFor(c){
+  if (typeof c.icon === 'string' && c.icon.startsWith('svg:')) {
+    const k = c.icon.slice(4);
+    if (ICON_SET[k]) return k;
+  }
+  return guessIconKey(c.name, c.subcategoria, c.categoria);
+}
+function iconTileHtml(key, size){
+  const ic = ICON_SET[key];
+  return `<span class="ico-tile ${size}" style="--ib:${ic.bg};--if:${ic.fg};" aria-hidden="true"><svg viewBox="0 0 32 32">${ic.svg}</svg></span>`;
+}
+function collectionIconHtml(c, size = 'lg'){
+  const key = iconKeyFor(c);
+  if (key) return iconTileHtml(key, size);
+  const emoji = (c.icon && !String(c.icon).startsWith('svg:')) ? c.icon : '';
+  if (emoji) return `<span class="ico-tile ${size} emoji" style="--ib:#E8E4DA;--if:#4A453C;" aria-hidden="true">${escapeHtml(emoji)}</span>`;
+  return iconTileHtml('generico', size);
+}
+function collectionIconColor(c){
+  const k = iconKeyFor(c);
+  return k ? ICON_SET[k].fg : 'var(--brass)';
+}
+// Para informes impresos y textos planos: solo el emoji si lo hay (los
+// dibujos SVG no se imprimen en la cabecera).
+function iconPlain(icon){
+  return (icon && !String(icon).startsWith('svg:')) ? icon : '';
+}
+// Selector de icono: cuadrícula de baldosas + "Automático" (deduce por nombre).
+function buildIconPicker(boxId, inputId){
+  const box = document.getElementById(boxId);
+  box.innerHTML =
+    `<div class="icon-opt" data-i=""><span class="ico-tile sm" style="--ib:#F3EEE4;--if:#6A6358;">auto</span>Automático</div>` +
+    Object.entries(ICON_SET).map(([k, ic]) => `<div class="icon-opt" data-i="svg:${k}">${iconTileHtml(k, 'sm')}${ic.label}</div>`).join('');
+  box.onclick = e => {
+    const o = e.target.closest('.icon-opt'); if (!o) return;
+    const inp = document.getElementById(inputId);
+    inp.value = o.dataset.i;
+    inp.dispatchEvent(new Event('input', { bubbles: true }));
+    refreshIconPicker(boxId, inputId);
+  };
+  refreshIconPicker(boxId, inputId);
+}
+function refreshIconPicker(boxId, inputId){
+  const v = document.getElementById(inputId).value || '';
+  document.querySelectorAll('#' + boxId + ' .icon-opt').forEach(o => o.classList.toggle('on', o.dataset.i === (v.startsWith('svg:') ? v : '')));
+}
+
 function collectionCardHtml(c){
   const total = c.stats?.total || 0;
   const tengo = c.stats?.tengo || 0;
   const pct = total ? Math.round((tengo/total)*100) : 0;
   return `
-    <div class="col-card" data-nav="col" data-id="${c.id}">
-      <div class="icon">${c.icon || '📚'}</div>
-      <h3>${escapeHtml(c.name)}</h3>
-      <div class="meta">${c.type === 'libre' ? `${total} elementos` : `${tengo}/${total} (${pct}%)`}</div>
-      ${c.type !== 'libre' ? `<div class="bar"><div style="width:${pct}%;"></div></div>` : ''}
+    <div class="col-card" data-nav="col" data-id="${c.id}" style="--bar:${collectionIconColor(c)};">
+      ${collectionIconHtml(c, 'lg')}
+      <div>
+        <h3>${escapeHtml(c.name)}</h3>
+        <div class="meta">${c.type === 'libre' ? `${total} elementos` : `${tengo}/${total} (${pct}%)`}</div>
+        ${c.type !== 'libre' ? `<div class="bar"><div style="width:${pct}%;"></div></div>` : ''}
+      </div>
     </div>`;
 }
 // Carpeta de categoría (p. ej. "CROMOS"): se muestra igual que una colección
@@ -714,18 +843,23 @@ function categoryCardHtml(cat){
   const subs = new Set(cols.map(c => c.subcategoria || 'Otros'));
   return `
     <div class="col-card" data-nav="cat" data-cat="${escapeHtml(cat)}">
-      <div class="icon">📂</div>
-      <h3>${escapeHtml(cat)}</h3>
-      <div class="meta">${subs.size} subcategoría${subs.size === 1 ? '' : 's'} · ${cols.length} colección${cols.length === 1 ? '' : 'es'}</div>
+      ${iconTileHtml(guessIconKey(cat) || 'generico', 'lg')}
+      <div>
+        <h3>${escapeHtml(cat)}</h3>
+        <div class="meta">${subs.size} subcategoría${subs.size === 1 ? '' : 's'} · ${cols.length} colección${cols.length === 1 ? '' : 'es'}</div>
+      </div>
     </div>`;
 }
 function subcategoryCardHtml(cat, sub){
   const cols = collectionsCache.filter(c => c.categoria === cat && (c.subcategoria || 'Otros') === sub);
+  const key = guessIconKey(sub) || 'generico';
   return `
     <div class="col-card" data-nav="sub" data-cat="${escapeHtml(cat)}" data-sub="${escapeHtml(sub)}">
-      <div class="icon">🗂️</div>
-      <h3>${escapeHtml(sub)}</h3>
-      <div class="meta">${cols.length} colección${cols.length === 1 ? '' : 'es'}</div>
+      ${iconTileHtml(key, 'lg')}
+      <div>
+        <h3>${escapeHtml(sub)}</h3>
+        <div class="meta">${cols.length} colección${cols.length === 1 ? '' : 'es'}</div>
+      </div>
     </div>`;
 }
 document.getElementById('collections-grid').addEventListener('click', e => {
@@ -777,6 +911,7 @@ function renderCollectionsGrid(){
    ========================================================================= */
 document.getElementById('btn-new-collection').onclick = () => {
   document.getElementById('nc-name').value = ''; document.getElementById('nc-name').classList.remove('err');
+  document.getElementById('nc-icon').value = ''; refreshIconPicker('nc-icons', 'nc-icon');
   // Si estamos navegando dentro de una categoría/subcategoría, la nueva
   // colección se propone ya clasificada ahí mismo (se puede cambiar antes de crear).
   document.getElementById('nc-categoria').value = navCategoria || '';
@@ -814,7 +949,7 @@ async function createCromosTemplate(){
     const ops = toCreate.map(t => ([
       'set',
       doc(collection(db, colPath())),
-      { name: t.name, icon: '🎴', type: 'checklist', categoria: 'CROMOS', subcategoria: t.sub, fields: [], stats: { total: 0, tengo: 0 }, createdAt: serverTimestamp() }
+      { name: t.name, icon: 'svg:' + (guessIconKey(t.sub, t.name) || 'cromos'), type: 'checklist', categoria: 'CROMOS', subcategoria: t.sub, fields: [], stats: { total: 0, tengo: 0 }, createdAt: serverTimestamp() }
     ]));
     await commitOps(ops, 'Creando estructura CROMOS...');
     showToast(`${toCreate.length} colecciones creadas en «CROMOS»`);
@@ -822,9 +957,8 @@ async function createCromosTemplate(){
   } finally { endProgress(); }
 }
 document.getElementById('btn-cromos-template').onclick = createCromosTemplate;
-const ICONS = ['🪙','🃏','📦','📚','🖼️','🎫','⚽','🧸','🚗','🏷️','📀','🔑'];
-document.getElementById('nc-icons').innerHTML = ICONS.map(i => `<span class="chip" data-i="${i}">${i}</span>`).join('');
-document.getElementById('nc-icons').addEventListener('click', e => { const c = e.target.closest('.chip'); if (c) document.getElementById('nc-icon').value = c.dataset.i; });
+buildIconPicker('nc-icons', 'nc-icon');
+buildIconPicker('set-icons', 'set-icon');
 
 const PRESETS = {
   'Genérica': ['Nombre','Descripción|textarea','Estado','Ubicación','Notas|textarea'],
@@ -893,7 +1027,7 @@ document.getElementById('fields-presets').addEventListener('click', e => {
 
 function selectNewCollectionMode(mode){
   const nameEl = document.getElementById('nc-name'), name = nameEl.value.trim();
-  const icon = document.getElementById('nc-icon').value.trim() || '📚';
+  const icon = document.getElementById('nc-icon').value.trim();
   if (!name) { nameEl.classList.add('err'); nameEl.focus(); showToast('Ponle un nombre a la colección'); return; }
   const categoria = document.getElementById('nc-categoria').value.trim();
   const subcategoria = document.getElementById('nc-subcategoria').value.trim();
@@ -2036,7 +2170,7 @@ document.getElementById('btn-summary-report').onclick = () => {
 
   document.getElementById('print-area').innerHTML = `
     <div class="preport-header">
-      <h1>${escapeHtml(currentCollectionMeta.icon || '')} ${escapeHtml(currentCollectionMeta.name)} — Resumen por valor</h1>
+      <h1>${escapeHtml(iconPlain(currentCollectionMeta.icon))} ${escapeHtml(currentCollectionMeta.name)} — Resumen por valor</h1>
       <p class="psub">Generado el ${fecha} · ${escapeHtml(criterio)} · agrupado por país y valor (todos los años juntos)</p>
     </div>
     <div class="pcountries">
@@ -2143,7 +2277,7 @@ function renderGroupedReport(baseItems, paisField, anoField, valorField, cecaFie
 
   document.getElementById('print-area').innerHTML = `
     <div class="preport-header">
-      <h1>${escapeHtml(currentCollectionMeta.icon || '')} ${escapeHtml(currentCollectionMeta.name)}</h1>
+      <h1>${escapeHtml(iconPlain(currentCollectionMeta.icon))} ${escapeHtml(currentCollectionMeta.name)}</h1>
       <p class="psub">Informe generado el ${fecha}${baseItems.length !== currentItems.length ? ` — mostrando ${baseItems.length} de ${currentItems.length} (filtro aplicado)` : ''}</p>
       <div class="psummary">
         <div><b>${total}</b><span>Total</span></div>
@@ -2188,7 +2322,7 @@ function renderChecklistReport(baseItems, paisField, anoField, valorField, cecaF
 
   document.getElementById('print-area').innerHTML = `
     <div class="cl-header">
-      <h1>${escapeHtml(currentCollectionMeta.icon || '')} ${escapeHtml(currentCollectionMeta.name)}</h1>
+      <h1>${escapeHtml(iconPlain(currentCollectionMeta.icon))} ${escapeHtml(currentCollectionMeta.name)}</h1>
       <p>Checklist — ${fecha} — ${tengo}/${total} conseguidos${baseItems.length !== currentItems.length ? ` — mostrando ${baseItems.length} de ${currentItems.length} (filtro aplicado)` : ''}</p>
     </div>
     <div class="cl-grid">
@@ -2235,7 +2369,12 @@ document.getElementById('btn-history').onclick = async () => {
    AJUSTES DE COLECCIÓN
    ========================================================================= */
 document.getElementById('btn-collection-settings').onclick = () => {
-  $('set-name').value = currentCollectionMeta.name; $('set-icon').value = currentCollectionMeta.icon || '';
+  $('set-name').value = currentCollectionMeta.name;
+  // Solo se preselecciona un icono si es uno de la galería; con un emoji
+  // antiguo queda en "Automático" (se deduce por nombre) y se conserva el emoji
+  // mientras no se elija otro.
+  $('set-icon').value = String(currentCollectionMeta.icon || '').startsWith('svg:') ? currentCollectionMeta.icon : '';
+  refreshIconPicker('set-icons', 'set-icon');
   const chk = currentCollectionMeta.type === 'checklist';
   $('act-update').style.display = chk ? '' : 'none';
   $('set-valor-fijo-wrap').style.display = chk ? '' : 'none';
@@ -2250,7 +2389,9 @@ async function saveCollectionSettings(){
   const vfRaw = ($('set-valor-fijo').value || '').trim();
   const vf = vfRaw ? parseValorNumerico(vfRaw) : null;
   const cid = currentCollectionId;
-  await updateDoc(doc(db, colPath(), cid), { name: $('set-name').value, icon: $('set-icon').value, valorFijo: vf, categoria: $('set-categoria').value.trim(), subcategoria: $('set-subcategoria').value.trim() });
+  // "Automático" (vacío) conserva el emoji antiguo si lo había.
+  const iconNuevo = $('set-icon').value || iconPlain(currentCollectionMeta.icon);
+  await updateDoc(doc(db, colPath(), cid), { name: $('set-name').value, icon: iconNuevo, valorFijo: vf, categoria: $('set-categoria').value.trim(), subcategoria: $('set-subcategoria').value.trim() });
   closeModal('modal-settings');
   showToast('Colección actualizada', async () => { await updateDoc(doc(db, colPath(), cid), before); });
 }
