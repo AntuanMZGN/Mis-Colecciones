@@ -55,16 +55,36 @@
   .icon-opt.on{border-color:var(--text);color:var(--text);font-weight:700;}
   .icon-opt .ico-tile.sm svg{width:24px;height:24px;}
   .title-with-icon{display:inline-flex;align-items:center;gap:12px;}
-  /* Paneles de botones agrupados por utilidad */
-  .panel{background:var(--panel);border:1px solid var(--border);border-top:4px solid var(--pc,var(--border));border-radius:18px;padding:12px 16px 6px;margin-top:12px;}
-  .panel-row{display:flex;flex-wrap:wrap;gap:12px;}
-  .panel-row .panel{flex:1 1 200px;}
-  .panel-title{margin:0 0 10px;font-family:var(--font-body);font-size:.7rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--pc,var(--muted));}
-  .panel .toolbar{margin:0 0 10px;}
-  .panel-sep{height:1px;background:var(--border);margin:6px 0 12px;}
-  .panel-sub{font-size:.74rem;color:var(--muted);margin-bottom:8px;}
-  #summary-counter{font-size:.85rem;border-radius:999px;}
+  /* Barra de acciones: UNA sola fila. Cada menú agrupa las funciones de un
+     mismo tipo (ver, informes...) y se despliega al pulsarlo, para que los
+     registros ocupen casi toda la pantalla. */
+  .actionbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0 10px;position:relative;}
+  .ab-sep{width:1px;height:26px;background:var(--border);margin:0 2px;}
+  .menu{position:relative;}
+  .menu>summary{list-style:none;cursor:pointer;user-select:none;}
+  .menu>summary::-webkit-details-marker{display:none;}
+  .menu[open]>summary{border-color:var(--text);}
+  .menu .dot{width:9px;height:9px;border-radius:50%;background:var(--pc,var(--muted));flex:none;}
+  .menu-list{position:absolute;top:calc(100% + 6px);left:0;z-index:30;min-width:250px;max-width:calc(100vw - 32px);background:var(--panel);border:1px solid var(--border);border-top:4px solid var(--pc,var(--border));border-radius:16px;padding:10px;box-shadow:0 14px 34px rgba(0,0,0,.16);display:flex;flex-direction:column;gap:6px;}
+  .menu-title{font-size:.68rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--pc,var(--muted));padding:0 4px 2px;}
+  .menu-list .btn{width:100%;flex-direction:column;align-items:flex-start;gap:1px;border-radius:12px;white-space:normal;text-align:left;}
+  .menu-list .btn small{display:block;color:var(--muted);font-size:.7rem;font-weight:400;}
+  /* Filtros y marcado masivo, pegados justo encima de la tabla. */
+  .tablebar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--border);border-top:3px solid var(--blue);border-radius:16px;padding:8px 10px;margin-bottom:8px;}
+  .tablebar .searchbar{flex:1 1 150px;min-width:120px;max-width:240px;padding:7px 10px;font-size:.82rem;}
+  .tablebar #detail-filters{display:contents;}
+  .tablebar select.filter-select{width:auto;max-width:150px;padding:7px 8px;font-size:.8rem;}
+  .tablebar .btn.small{padding:5px 10px;}
+  .tb-mass{display:inline-flex;gap:6px;align-items:center;margin-left:auto;padding-left:10px;border-left:1px solid var(--border);}
+  .tb-mass-label{font-size:.7rem;color:var(--muted);}
+  .tb-mass .btn{padding:6px 11px;font-size:.78rem;}
+  #summary-counter{font-size:.8rem;border-radius:999px;padding:5px 12px;}
   #summary-counter small{color:var(--muted);}
+  @media (max-width:680px){
+    .menu{position:static;}
+    .menu-list{left:0;right:0;min-width:0;max-width:none;}
+    .tb-mass{margin-left:0;border-left:none;padding-left:0;width:100%;}
+  }
   .brand{display:inline-flex;align-items:center;gap:10px;}
   a{color:var(--brass);}
   .wrap{max-width:1100px;margin:0 auto;padding:20px 16px 60px;}
@@ -134,7 +154,7 @@
   .searchbar{flex:1;min-width:160px;}
 
   /* ---------- Tabla checklist ---------- */
-  .table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:18px;-webkit-overflow-scrolling:touch;max-height:70vh;overflow-y:auto;}
+  .table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:18px;-webkit-overflow-scrolling:touch;max-height:78vh;overflow-y:auto;}
   table{border-collapse:collapse;width:100%;font-size:.83rem;}
   thead th{position:sticky;top:0;background:var(--panel2);text-align:left;padding:9px 10px;font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);z-index:2;}
   tbody td{padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap;}
@@ -360,48 +380,41 @@
           <div class="stat" id="valor-total-stat" style="display:none;"></div>
         </div>
       </div>
-      <!-- Botones agrupados por tipo de función; cada grupo lleva su título y su color. -->
-      <section class="panel" style="--pc:#1F5FA8;">
-        <h4 class="panel-title">Tabla · buscar y filtrar lo que ves</h4>
-        <div class="toolbar">
-          <input class="searchbar" id="detail-search" placeholder="Buscar...">
-          <span class="stat" id="summary-counter" style="display:none;" title="Elementos sin marcar como «tengo» entre los que muestran los filtros de país, año, valor... (el filtro «Estado» no influye en este contador)."></span>
-        </div>
-        <div class="toolbar" id="detail-filters"></div>
-        <div id="panel-masivo">
-          <div class="panel-sep"></div>
-          <div class="panel-sub">Marcado masivo · se aplica a los elementos que se ven ahora con los filtros</div>
-          <div class="toolbar" style="margin-bottom:0;">
-            <button class="btn" id="btn-mark-all">✅ Marcar todo</button>
-            <button class="btn" id="btn-unmark-all">⬜ Desmarcar todo</button>
+      <!-- Acciones en UNA fila; cada menú agrupa funciones del mismo tipo. -->
+      <div class="actionbar" id="actionbar">
+        <button class="btn primary" id="btn-add-item">+ Añadir elemento</button>
+        <span class="ab-sep"></span>
+        <details class="menu" style="--pc:#6B2D9B;">
+          <summary class="btn"><span class="dot"></span>Ver y analizar ▾</summary>
+          <div class="menu-list">
+            <div class="menu-title">Ver y analizar</div>
+            <button class="btn" id="btn-gallery">🖼️ Galería<small>Fotos de las piezas</small></button>
+            <button class="btn" id="btn-analysis">📊 Análisis<small>Reparto por países y mapa</small></button>
+            <button class="btn" id="btn-history">📈 Historial<small>Evolución de tu progreso</small></button>
           </div>
-        </div>
-      </section>
-      <div class="panel-row">
-        <section class="panel" style="--pc:#2E7A1F;">
-          <h4 class="panel-title">Añadir</h4>
-          <div class="toolbar"><button class="btn" id="btn-add-item">+ Añadir elemento</button></div>
-        </section>
-        <section class="panel" style="--pc:#6B2D9B;">
-          <h4 class="panel-title">Ver y analizar</h4>
-          <div class="toolbar">
-            <button class="btn" id="btn-gallery">🖼️ Galería</button>
-            <button class="btn" id="btn-analysis">📊 Análisis</button>
-            <button class="btn" id="btn-history">📈 Historial</button>
+        </details>
+        <details class="menu" style="--pc:#B4440F;">
+          <summary class="btn"><span class="dot"></span>Informes ▾</summary>
+          <div class="menu-list">
+            <div class="menu-title">Informes · se descargan en PDF o Excel</div>
+            <button class="btn" id="btn-snapshot">📸 Informe / Snapshot<small>Listado completo o checklist</small></button>
+            <button class="btn" id="btn-summary-report" title="Una línea por país y valor, sumando todos los años">📐 Resumen por valor<small>Una línea por país y valor</small></button>
           </div>
-        </section>
-        <section class="panel" style="--pc:#B4440F;">
-          <h4 class="panel-title">Informes (PDF o Excel)</h4>
-          <div class="toolbar">
-            <button class="btn" id="btn-snapshot">📸 Informe / Snapshot</button>
-            <button class="btn" id="btn-summary-report" title="Una línea por país y valor, sumando todos los años">📐 Resumen por valor</button>
-          </div>
-        </section>
-        <section class="panel" style="--pc:#4A453C;">
-          <h4 class="panel-title">Colección</h4>
-          <div class="toolbar"><button class="btn" id="btn-collection-settings">⚙️ Ajustes de la colección</button></div>
-        </section>
+        </details>
+        <span class="ab-sep"></span>
+        <button class="btn" id="btn-collection-settings">⚙️ Ajustes</button>
       </div>
+      <!-- Filtros pegados a la tabla; el marcado masivo va aparte, a la derecha. -->
+      <section class="tablebar">
+        <input class="searchbar" id="detail-search" placeholder="🔍 Buscar...">
+        <div id="detail-filters"></div>
+        <span class="stat" id="summary-counter" style="display:none;" title="Elementos sin marcar como «tengo» entre los que muestran los filtros de país, año, valor... (el filtro «Estado» no influye en este contador)."></span>
+        <span class="tb-mass" id="panel-masivo">
+          <span class="tb-mass-label">Marcar lo que ves:</span>
+          <button class="btn" id="btn-mark-all">✅ Marcar todo</button>
+          <button class="btn" id="btn-unmark-all">⬜ Desmarcar todo</button>
+        </span>
+      </section>
       <div id="detail-body"></div>
     </div>
   </div>
@@ -1632,6 +1645,14 @@ function renderDetailBody(){
 }
 let searchTimer; document.getElementById('detail-search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { renderLimit = RL0; renderDetailBody(); renderSummaryCounter(); renderValorTotal(); refreshAnalysisIfOpen(); }, 150); });
 
+// Menús desplegables de la barra de acciones: se cierran al elegir una opción
+// o al pulsar fuera, y solo hay uno abierto a la vez.
+document.addEventListener('click', e => {
+  const abierto = e.target.closest('details.menu');
+  document.querySelectorAll('details.menu[open]').forEach(d => {
+    if (d !== abierto || e.target.closest('.menu-list button')) d.removeAttribute('open');
+  });
+});
 document.getElementById('btn-mark-all').onclick = () => bulkSetTengo(true);
 document.getElementById('btn-unmark-all').onclick = () => bulkSetTengo(false);
 
