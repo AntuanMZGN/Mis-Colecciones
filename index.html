@@ -78,6 +78,14 @@
   .tb-mass{display:inline-flex;gap:6px;align-items:center;margin-left:auto;padding-left:10px;border-left:1px solid var(--border);}
   .tb-mass-label{font-size:.7rem;color:var(--muted);}
   .tb-mass .btn{padding:6px 11px;font-size:.78rem;}
+  /* Cuadro de cifras: fila 1 = toda la colección; fila 2 = lo que dejan ver
+     los filtros (y solo ahí va el valor). Ocupa lo mismo que las cajitas de antes. */
+  .stats-grid{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;align-items:baseline;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:7px 14px;font-size:.78rem;max-width:100%;}
+  .sg-label{font-size:.64rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);white-space:nowrap;}
+  .sg-label.f{color:var(--blue);}
+  .sg-vals{display:flex;flex-wrap:wrap;gap:1px 14px;color:var(--muted);}
+  .sg-vals b{font-size:1rem;color:var(--text);margin-right:2px;}
+  .sg-off{opacity:.55;}
   #summary-counter{font-size:.8rem;border-radius:999px;padding:5px 12px;}
   #summary-counter small{color:var(--muted);}
   @media (max-width:680px){
@@ -375,10 +383,7 @@
     <div id="view-detail" style="display:none;">
       <div class="detail-header-row">
         <h2 id="detail-title" style="font-size:1.6rem;color:var(--text);"></h2>
-        <div class="stats-inline" style="align-items:center;">
-          <div id="detail-stats" class="stats-inline"></div>
-          <div class="stat" id="valor-total-stat" style="display:none;"></div>
-        </div>
+        <div id="detail-stats" class="stats-grid"></div>
       </div>
       <!-- Acciones en UNA fila; cada menú agrupa funciones del mismo tipo. -->
       <div class="actionbar" id="actionbar">
@@ -1433,20 +1438,32 @@ window.moreRows = moreRows;
 let sortState = { field: null, dir: 'asc' };
 let filterState = {}; // { fieldKey: valorSeleccionado }
 
+// Cifras de arriba, en dos filas con título:
+//  · "Toda la colección": total, conseguidos, faltan y progreso de TODOS los elementos.
+//  · "Lo filtrado": lo mismo pero solo de lo que dejan ver los filtros y el buscador,
+//    más el valor (el valor solo se calcula sobre lo filtrado).
+// Sin filtros activos la segunda fila sale atenuada (es igual que la primera).
+let valorFiltradoTxt = null;   // null = esta colección no calcula valor
 function renderDetailStats(){
   const box = document.getElementById('detail-stats');
   const total = currentItems.length;
   const tengo = currentItems.filter(i => i.tengo).length;
+  const hayFiltro = Object.keys(filterState).length > 0 || !!(document.getElementById('detail-search').value || '').trim();
+  const fil = hayFiltro ? lastFilteredItems : currentItems;
+  const ftotal = fil.length, ftengo = fil.filter(i => i.tengo).length;
+  const n = (v, color, txt) => `<span><b${color ? ` style="color:${color};"` : ''}>${v}</b>${txt}</span>`;
+  const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0) + '%';
   if (currentCollectionMeta.type === 'libre') {
-    box.innerHTML = `<div class="stat"><b>${total}</b>elementos catalogados</div>`;
-  } else {
-    const pct = total ? Math.round((tengo/total)*100) : 0;
     box.innerHTML = `
-      <div class="stat"><b>${total}</b>total</div>
-      <div class="stat"><b style="color:var(--green);">${tengo}</b>conseguidos</div>
-      <div class="stat"><b style="color:var(--red);">${total-tengo}</b>faltan</div>
-      <div class="stat"><b style="color:var(--blue);">${pct}%</b>progreso</div>`;
+      <span class="sg-label">Toda la colección</span><span class="sg-vals">${n(total, '', ' elementos catalogados')}</span>
+      ${hayFiltro ? `<span class="sg-label f">Lo filtrado</span><span class="sg-vals">${n(ftotal, '', ' en vista')}</span>` : ''}`;
+    return;
   }
+  box.innerHTML = `
+    <span class="sg-label">Toda la colección</span>
+    <span class="sg-vals">${n(total, '', ' total')}${n(tengo, 'var(--green)', ' conseguidos')}${n(total - tengo, 'var(--red)', ' faltan')}${n(pct(tengo, total), 'var(--blue)', ' progreso')}</span>
+    <span class="sg-label f">Lo filtrado</span>
+    <span class="sg-vals ${hayFiltro ? '' : 'sg-off'}" title="${hayFiltro ? 'Solo lo que dejan ver los filtros y el buscador' : 'Sin filtros activos: es igual que toda la colección'}">${n(ftotal, '', ' en vista')}${n(ftengo, 'var(--green)', ' conseguidos')}${n(ftotal - ftengo, 'var(--red)', ' faltan')}${n(pct(ftengo, ftotal), 'var(--blue)', ' progreso')}${valorFiltradoTxt ? n(valorFiltradoTxt, 'var(--brass)', ' valor de lo conseguido') : ''}</span>`;
 }
 
 function getFieldValue(item, fieldKey){
@@ -1461,13 +1478,15 @@ function getFieldValue(item, fieldKey){
 // contando también las copias repetidas (campo "número") cuando la moneda
 // está marcada como repetida.
 function renderValorTotal(){
-  const el = document.getElementById('valor-total-stat');
-  if (!el) return;
-  if (currentCollectionMeta.type !== 'checklist') { el.style.display = 'none'; return; }
+  valorFiltradoTxt = calcValorFiltrado();
+  renderDetailStats();   // se redibuja aquí porque necesita los elementos ya filtrados
+}
+function calcValorFiltrado(){
+  if (currentCollectionMeta.type !== 'checklist') return null;
   const fields = currentCollectionMeta.fields || [];
   const valorField = findFieldByHints(fields, ['valor', 'denominacion', 'denominación']);
   const valorFijo = typeof currentCollectionMeta.valorFijo === 'number' ? currentCollectionMeta.valorFijo : null;
-  if (!valorField && !valorFijo) { el.style.display = 'none'; return; }
+  if (!valorField && !valorFijo) return null;
   // Campo opcional que indica cuántas copias adicionales repetidas hay de un
   // mismo elemento (además del que ya cuenta como "tengo").
   const cantidadField = findFieldByHints(fields, ['numero', 'número', 'cantidad', 'veces', 'copias', 'repetid']);
@@ -1478,9 +1497,7 @@ function renderValorTotal(){
     const extra = (cantidadField && i.repetido) ? (parseInt(i.campos?.[cantidadField.key], 10) || 0) : 0;
     total += valor * (1 + extra);
   });
-  const formatted = total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
-  el.style.display = '';
-  el.innerHTML = `<b style="color:var(--brass);">${formatted}</b>valor total`;
+  return total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
 }
 window.renderValorTotal = renderValorTotal;
 
