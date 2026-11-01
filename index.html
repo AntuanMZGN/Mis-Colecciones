@@ -329,6 +329,36 @@
     .detail-header-row{flex-direction:column;align-items:flex-start;gap:8px;}
     .stats-inline .stat{min-width:56px;padding:5px 9px;}
   }
+  /* ===== Disposición con panel lateral (prueba) ===== */
+  .detail-layout{display:block;}
+  .side-toggle{display:none;}
+  .side-sec{background:var(--panel);border:1px solid var(--border);border-top:3px solid var(--pc,var(--border));border-radius:16px;padding:10px 12px;display:flex;flex-direction:column;gap:7px;}
+  .side-title{margin:0;font-family:var(--font-body);font-size:.66rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--pc,var(--muted));}
+  .side-sec .btn{width:100%;justify-content:flex-start;padding:7px 12px;font-size:.82rem;}
+  .side-sec .searchbar{width:100%;max-width:none;padding:7px 10px;font-size:.82rem;}
+  .side #detail-filters{display:flex;flex-direction:column;gap:6px;}
+  .side select.filter-select{width:100%;max-width:none;padding:7px 8px;font-size:.8rem;}
+  .side #detail-filters .btn.small{justify-content:center;}
+  .side-row{display:flex;gap:6px;}
+  .side-row .btn{justify-content:center;padding:7px 6px;font-size:.76rem;}
+  .side #summary-counter{border-radius:12px;font-size:.78rem;}
+  .side .stats-grid{grid-template-columns:1fr;gap:2px;padding:9px 12px;}
+  .side .sg-label{margin-top:3px;}
+  .side .sg-vals{display:grid;grid-template-columns:1fr 1fr;gap:1px 8px;}
+  @media (prefers-color-scheme: dark){ .side-title{color:color-mix(in srgb,var(--pc) 40%,#fff);} }
+  @media (min-width:900px){
+    body.in-detail .wrap{max-width:none;padding:10px 18px 30px;}
+    .detail-layout{display:grid;grid-template-columns:262px minmax(0,1fr);gap:16px;align-items:start;}
+    .side{position:sticky;top:10px;max-height:calc(100vh - 20px);overflow-y:auto;display:flex;flex-direction:column;gap:10px;}
+    .detail-main{min-width:0;}
+    .detail-main .table-wrap{max-height:calc(100vh - 110px);}
+    .detail-header-row{margin:6px 0 10px;}
+  }
+  @media (max-width:899px){
+    .side-toggle{display:inline-flex;}
+    .side{display:none;margin-bottom:12px;}
+    .side.open{display:flex;flex-direction:column;gap:10px;}
+  }
 </style>
 </head>
 <body>
@@ -383,44 +413,46 @@
     <div id="view-detail" style="display:none;">
       <div class="detail-header-row">
         <h2 id="detail-title" style="font-size:1.6rem;color:var(--text);"></h2>
-        <div id="detail-stats" class="stats-grid"></div>
+        <button class="btn side-toggle" id="btn-side-toggle" type="button">☰ Filtros y acciones</button>
       </div>
-      <!-- Acciones en UNA fila; cada menú agrupa funciones del mismo tipo. -->
-      <div class="actionbar" id="actionbar">
-        <button class="btn primary" id="btn-add-item">+ Añadir elemento</button>
-        <span class="ab-sep"></span>
-        <details class="menu" style="--pc:#6B2D9B;">
-          <summary class="btn"><span class="dot"></span>Ver y analizar ▾</summary>
-          <div class="menu-list">
-            <div class="menu-title">Ver y analizar</div>
-            <button class="btn" id="btn-gallery">🖼️ Galería<small>Fotos de las piezas</small></button>
-            <button class="btn" id="btn-analysis">📊 Análisis<small>Reparto por países y mapa</small></button>
-            <button class="btn" id="btn-history">📈 Historial<small>Evolución de tu progreso</small></button>
-          </div>
-        </details>
-        <details class="menu" style="--pc:#B4440F;">
-          <summary class="btn"><span class="dot"></span>Informes ▾</summary>
-          <div class="menu-list">
-            <div class="menu-title">Informes · se descargan en PDF o Excel</div>
-            <button class="btn" id="btn-snapshot">📸 Informe / Snapshot<small>Listado completo o checklist</small></button>
-            <button class="btn" id="btn-summary-report" title="Una línea por país y valor, sumando todos los años">📐 Resumen por valor<small>Una línea por país y valor</small></button>
-          </div>
-        </details>
-        <span class="ab-sep"></span>
-        <button class="btn" id="btn-collection-settings">⚙️ Ajustes</button>
+      <div class="detail-layout">
+        <!-- Panel lateral: cifras, filtros y acciones; los registros ocupan el resto. -->
+        <aside class="side" id="side">
+          <div id="detail-stats" class="stats-grid"></div>
+          <button class="btn primary" id="btn-add-item">+ Añadir elemento</button>
+          <section class="side-sec" style="--pc:#1F5FA8;">
+            <h4 class="side-title">Filtrar lo que ves</h4>
+            <input class="searchbar" id="detail-search" placeholder="🔍 Buscar...">
+            <div id="detail-filters"></div>
+            <span class="stat" id="summary-counter" style="display:none;" title="Elementos sin marcar como «tengo» entre los que muestran los filtros de país, año, valor... (el filtro «Estado» no influye en este contador)."></span>
+          </section>
+          <section class="side-sec" style="--pc:#2E7A1F;" id="panel-masivo">
+            <h4 class="side-title">Marcar lo que ves</h4>
+            <div class="side-row">
+              <button class="btn" id="btn-mark-all">✅ Marcar todo</button>
+              <button class="btn" id="btn-unmark-all">⬜ Desmarcar todo</button>
+            </div>
+          </section>
+          <section class="side-sec" style="--pc:#6B2D9B;">
+            <h4 class="side-title">Ver y analizar</h4>
+            <button class="btn" id="btn-gallery">🖼️ Galería</button>
+            <button class="btn" id="btn-analysis">📊 Análisis</button>
+            <button class="btn" id="btn-history">📈 Historial</button>
+          </section>
+          <section class="side-sec" style="--pc:#B4440F;">
+            <h4 class="side-title">Informes · PDF o Excel</h4>
+            <button class="btn" id="btn-snapshot">📸 Informe / Snapshot</button>
+            <button class="btn" id="btn-summary-report" title="Una línea por país y valor, sumando todos los años">📐 Resumen por valor</button>
+          </section>
+          <section class="side-sec" style="--pc:#4A453C;">
+            <h4 class="side-title">Colección</h4>
+            <button class="btn" id="btn-collection-settings">⚙️ Ajustes</button>
+          </section>
+        </aside>
+        <div class="detail-main">
+          <div id="detail-body"></div>
+        </div>
       </div>
-      <!-- Filtros pegados a la tabla; el marcado masivo va aparte, a la derecha. -->
-      <section class="tablebar">
-        <input class="searchbar" id="detail-search" placeholder="🔍 Buscar...">
-        <div id="detail-filters"></div>
-        <span class="stat" id="summary-counter" style="display:none;" title="Elementos sin marcar como «tengo» entre los que muestran los filtros de país, año, valor... (el filtro «Estado» no influye en este contador)."></span>
-        <span class="tb-mass" id="panel-masivo">
-          <span class="tb-mass-label">Marcar lo que ves:</span>
-          <button class="btn" id="btn-mark-all">✅ Marcar todo</button>
-          <button class="btn" id="btn-unmark-all">⬜ Desmarcar todo</button>
-        </span>
-      </section>
-      <div id="detail-body"></div>
     </div>
   </div>
 </div>
@@ -722,6 +754,7 @@ function navList(){
   if (unsubItems) { unsubItems(); unsubItems = null; }
   document.getElementById('view-list').style.display = 'block';
   document.getElementById('view-detail').style.display = 'none';
+  document.body.classList.remove('in-detail');
   renderCrumbs();
   renderCollectionsGrid();
 }
@@ -767,6 +800,7 @@ function openCollection(cid){
   currentCollectionMeta = collectionsCache.find(c => c.id === cid);
   document.getElementById('view-list').style.display = 'none';
   document.getElementById('view-detail').style.display = 'block';
+  document.body.classList.add('in-detail');
   renderCrumbs(currentCollectionMeta);
   renderDetailTitle();
   // El marcado masivo («tengo») solo tiene sentido en colecciones de lista.
@@ -1670,6 +1704,7 @@ document.addEventListener('click', e => {
     if (d !== abierto || e.target.closest('.menu-list button')) d.removeAttribute('open');
   });
 });
+document.getElementById('btn-side-toggle').onclick = () => document.getElementById('side').classList.toggle('open');
 document.getElementById('btn-mark-all').onclick = () => bulkSetTengo(true);
 document.getElementById('btn-unmark-all').onclick = () => bulkSetTengo(false);
 
