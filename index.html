@@ -311,6 +311,13 @@
   #progress .box{background:var(--panel);border:1px solid var(--brass);border-radius:12px;padding:22px 26px;min-width:280px;text-align:center;}
   #progress .pb{height:8px;background:var(--panel2);border-radius:4px;margin-top:12px;overflow:hidden;}
   #progress .pb>div{height:100%;background:var(--brass);width:0;transition:width .15s;}
+  .detail-desc{margin:4px 0 0;color:var(--muted);font-size:.88rem;white-space:pre-line;max-width:70ch;}
+  .info-sec{margin:14px 0;} .info-sec h3{margin:0 0 6px;font-size:.95rem;}
+  .info-photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:6px;}
+  .info-photos figure{position:relative;margin:0;background:var(--panel2);border:1px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer;}
+  .info-photos img{width:100%;height:110px;object-fit:cover;display:block;}
+  .info-photos .x{position:absolute;top:3px;right:3px;border:none;border-radius:50%;width:22px;height:22px;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;line-height:1;}
+  .file-btn{display:inline-block;cursor:pointer;} .file-btn input{display:none;}
   .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;}
   .gallery figure{margin:0;background:var(--panel2);border:1px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer;}
   .gallery img{width:100%;height:110px;object-fit:cover;display:block;}
@@ -383,6 +390,7 @@
     <div id="view-detail" style="display:none;">
       <div class="detail-header-row">
         <h2 id="detail-title" style="font-size:1.6rem;color:var(--text);"></h2>
+        <p class="detail-desc" id="detail-desc" style="display:none;"></p>
         <div id="detail-stats" class="stats-grid"></div>
       </div>
       <!-- Acciones en UNA fila; cada menú agrupa funciones del mismo tipo. -->
@@ -393,6 +401,7 @@
           <summary class="btn"><span class="dot"></span>Ver y analizar ▾</summary>
           <div class="menu-list">
             <div class="menu-title">Ver y analizar</div>
+            <button class="btn" id="btn-info">📖 Ficha y fotos<small>Descripción, portada y checklist</small></button>
             <button class="btn" id="btn-gallery">🖼️ Galería<small>Fotos de las piezas</small></button>
             <button class="btn" id="btn-analysis">📊 Análisis<small>Reparto por países y mapa</small></button>
             <button class="btn" id="btn-history">📈 Historial<small>Evolución de tu progreso</small></button>
@@ -555,6 +564,24 @@
     <h2>Galería de fotos</h2><div id="gallery-body" class="gallery"></div></div>
 </div>
 
+<!-- Ficha de la colección: descripción y fotos -->
+<div class="backdrop" id="modal-info">
+  <div class="modal wide"><button class="modal-close" onclick="closeModal('modal-info')">✕</button>
+    <h2>Ficha de la colección</h2>
+    <div class="field"><label>Descripción</label>
+      <textarea id="info-desc" rows="4" placeholder="Editorial, año, cuántas cartas tiene, dónde la conseguiste, curiosidades..."></textarea>
+      <div style="margin-top:6px;"><button class="btn primary small" id="info-save-desc">Guardar descripción</button></div></div>
+    <div class="info-sec"><h3>📘 Portada del álbum</h3><div class="info-photos" id="info-ph-portada"></div>
+      <label class="btn small file-btn">+ Elegir foto<input type="file" accept="image/*" data-tipo="portada"></label>
+      <span class="hint">Solo una: si subes otra, sustituye a la anterior.</span></div>
+    <div class="info-sec"><h3>📋 Checklist (lista de cromos/cartas)</h3><div class="info-photos" id="info-ph-checklist"></div>
+      <label class="btn small file-btn">+ Añadir fotos<input type="file" accept="image/*" multiple data-tipo="checklist"></label></div>
+    <div class="info-sec"><h3>🖼️ Otras fotos</h3><div class="info-photos" id="info-ph-otra"></div>
+      <label class="btn small file-btn">+ Añadir fotos<input type="file" accept="image/*" multiple data-tipo="otra"></label></div>
+    <p class="hint">Las fotos se guardan reducidas de tamaño y también aparecen en la Galería.</p>
+  </div>
+</div>
+
 <!-- Ficha completa de un elemento (colecciones de ficha libre) -->
 <div class="backdrop" id="modal-ficha">
   <div class="modal wide"><button class="modal-close" onclick="closeModal('modal-ficha')">✕</button>
@@ -654,7 +681,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
   getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc,
-  deleteDoc, query, orderBy, onSnapshot, writeBatch, increment, serverTimestamp, Timestamp
+  deleteDoc, query, where, orderBy, onSnapshot, writeBatch, increment, serverTimestamp, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 const app = initializeApp(firebaseConfig);
@@ -776,6 +803,9 @@ function openCollection(cid){
 function renderDetailTitle(){
   document.getElementById('detail-title').innerHTML =
     `<span class="title-with-icon">${collectionIconHtml(currentCollectionMeta, 'md')}<span>${escapeHtml(currentCollectionMeta.name)}</span></span>`;
+  const dd = document.getElementById('detail-desc');
+  dd.textContent = currentCollectionMeta.descripcion || '';
+  dd.style.display = currentCollectionMeta.descripcion ? '' : 'none';
 }
 window.openCollection = openCollection;
 
@@ -867,10 +897,24 @@ const ICON_SET = {
   animales: { label: 'Animales',         bg: '#F4E6D0', fg: '#8A5A17', svg: '<circle cx="9" cy="14" r="2.5"/><circle cx="14" cy="9" r="2.5"/><circle cx="20" cy="9" r="2.5"/><circle cx="25" cy="14" r="2.5"/><path d="M16 15c-4 0-8 5-8 8 0 3 3 3 5 2s5-1 6 0 5 1 5-2c0-3-4-8-8-8z" fill="currentColor" fill-opacity="0.16"/>' },
   fosil:    { label: 'Fósiles y conchas',bg: '#E8E1D2', fg: '#6B5B3A', svg: '<path d="M16 16a2 2 0 0 1 4 0 5 5 0 0 1-10 0 8 8 0 0 1 16 0 11 11 0 0 1-11 11"/>' },
   ancla:    { label: 'Barcos y mar',     bg: '#D6EAF2', fg: '#145F7E', svg: '<circle cx="16" cy="7" r="3"/><path d="M16 10v18M9 16h14M7 21c1 4 5 7 9 7s8-3 9-7"/>' },
+  sable: { label: 'Espada de luz (Jedi)', bg: '#DDE9FA', fg: '#1F5FA8', svg: '<path d="M24 4L12.5 15.5" stroke-width="5" stroke-opacity="0.22"/><path d="M24 4L12.5 15.5" stroke-width="2.2"/><rect x="5.5" y="16" width="10" height="4.6" rx="1.2" transform="rotate(45 10.5 18.3)" fill="currentColor" fill-opacity="0.16"/><path d="M11 20.5l-4 4M25 19v5M22.5 21.5h5"/>' },
+  espadas: { label: 'Duelo de espadas (Force)', bg: '#F9DCD8', fg: '#A12A22', svg: '<path d="M5 5l15 15M27 5L12 20"/><path d="M5 5l15 15M27 5L12 20" stroke-width="4.5" stroke-opacity="0.15"/><path d="M17.5 23l5-5M14.5 23l-5-5" stroke-width="3"/><path d="M21 26l3 3M11 26l-3 3"/>' },
+  playmobil: { label: 'Figurita (Playmobil)', bg: '#FFEBC2', fg: '#A8620A', svg: '<circle cx="16" cy="19" r="7.5" fill="currentColor" fill-opacity="0.16"/><path d="M8.5 17.5a7.5 7.5 0 0 1 15 0z" fill="currentColor" fill-opacity="0.16"/><path d="M9 16.5C5.5 15.5 4.5 12 6 8.5M23 16.5c3.5-1 4.5-4.5 3-8"/><path d="M13 20.5v.01M19 20.5v.01"/><path d="M11 23c1.2 4.5 8.8 4.5 10 0"/>' },
+  varita: { label: 'Varita mágica (Harry Potter)', bg: '#EFE3CF', fg: '#7A4B1E', svg: '<path d="M5.5 26.5L20 12" stroke-width="2.6"/><path d="M5.5 26.5L8 24" stroke-width="3.6"/><path d="M23.5 3.5v6.5M20.2 6.8h6.6M27 12.5l1.8 1.8M13 4.5l1.2 2.4M4.5 14l2.4 1.2"/><circle cx="23.5" cy="6.8" r="2" fill="currentColor" fill-opacity="0.16"/>' },
+  mascara: { label: 'Máscara de héroe (Marvel)', bg: '#E7E1F8', fg: '#4B34A6', svg: '<path d="M5 12c4.5-5.5 17.5-5.5 22 0 0 8-4 14.5-11 14.5S5 20 5 12z" fill="currentColor" fill-opacity="0.16"/><path d="M9 14l5.5 2.8M23 14l-5.5 2.8"/><path d="M16 7v5M11 8.5l2.2 3.2M21 8.5l-2.2 3.2"/>' },
+  capa: { label: 'Capa y escudo (DC)', bg: '#D9E7F8', fg: '#1F4FA0', svg: '<path d="M8 5h16l-2.2 21.5L16 23.5l-5.8 3z" fill="currentColor" fill-opacity="0.16"/><path d="M16.0 9.0L17.3 12.2L20.8 12.5L18.1 14.7L18.9 18.0L16.0 16.2L13.1 18.0L13.9 14.7L11.2 12.5L14.7 12.2z"/><path d="M8 5c-2 1-3 3-3 6M24 5c2 1 3 3 3 6"/>' },
+  muneca: { label: 'Muñeca (L.O.L.)', bg: '#F8DCE8', fg: '#A3205E', svg: '<circle cx="8.5" cy="8" r="3.6" fill="currentColor" fill-opacity="0.16"/><circle cx="23.5" cy="8" r="3.6" fill="currentColor" fill-opacity="0.16"/><circle cx="16" cy="17.5" r="9.5" fill="currentColor" fill-opacity="0.16"/><circle cx="12.4" cy="17" r="2.2"/><circle cx="19.6" cy="17" r="2.2"/><path d="M15 23h2M13 8.5l6 0"/>' },
+  roja: { label: 'Camiseta «10» (La Roja)', bg: '#F9DCD8', fg: '#A12A22', svg: '<path d="M11 4.5L4 9l3 6 3-1.8V27.5h12V13.2l3 1.8 3-6-7-4.5c-1 2.2-3 3.4-5 3.4s-4-1.2-5-3.4z" fill="currentColor" fill-opacity="0.16"/><path d="M13 16.5v7M17.5 16.5h3v7h-3z"/>' },
+  retratos: { label: 'Retratos (Selección)', bg: '#FBE8C8', fg: '#A15A00', svg: '<rect x="4" y="4" width="11" height="11" rx="2" fill="currentColor" fill-opacity="0.16"/><circle cx="9.5" cy="8.6" r="2"/><path d="M6 13.6c1-2 6-2 7 0"/><rect x="17" y="4" width="11" height="11" rx="2" fill="currentColor" fill-opacity="0.16"/><circle cx="22.5" cy="8.6" r="2"/><path d="M19 13.6c1-2 6-2 7 0"/><rect x="4" y="17" width="11" height="11" rx="2" fill="currentColor" fill-opacity="0.16"/><circle cx="9.5" cy="21.6" r="2"/><path d="M6 26.6c1-2 6-2 7 0"/><rect x="17" y="17" width="11" height="11" rx="2" fill="currentColor" fill-opacity="0.16"/><circle cx="22.5" cy="21.6" r="2"/><path d="M19 26.6c1-2 6-2 7 0"/>' },
+  panal: { label: 'Panal (España 2026)', bg: '#FDEFB8', fg: '#8A6A00', svg: '<path d="M16.0 4.5L20.3 7.0L20.3 12.0L16.0 14.5L11.7 12.0L11.7 7.0z" fill="currentColor" fill-opacity="0.16"/><path d="M9.5 15.5L13.8 18.0L13.8 23.0L9.5 25.5L5.2 23.0L5.2 18.0z" fill="currentColor" fill-opacity="0.16"/><path d="M22.5 15.5L26.8 18.0L26.8 23.0L22.5 25.5L18.2 23.0L18.2 18.0z" fill="currentColor" fill-opacity="0.16"/><path d="M16.0 6.5L16.8 8.4L18.9 8.6L17.3 9.9L17.8 11.9L16.0 10.8L14.2 11.9L14.7 9.9L13.1 8.6L15.2 8.4z"/>' },
   generico: { label: 'Otra colección',   bg: '#E8E4DA', fg: '#4A453C', svg: '<path d="M4 10l12-6 12 6v12l-12 6-12-6z" fill="currentColor" fill-opacity="0.16"/><path d="M4 10l12 6 12-6M16 16v12"/>' }
 };
 // Reglas para reconocer una colección antigua por su texto (ya sin tildes).
 const ICON_GUESS_RULES = [
+  [/force attax/, 'espadas'], [/star wars|jedi/, 'sable'], [/playmobil/, 'playmobil'],
+  [/harry potter|wizarding|hogwarts/, 'varita'], [/marvel/, 'mascara'], [/\bdc\b|dc comics|justice league/, 'capa'],
+  [/l\.?o\.?l\.?\s*surprise|\blol\b/, 'muneca'], [/idolos|la roja/, 'roja'],
+  [/vamos seleccion/, 'retratos'], [/espana 2026/, 'panal'],
   [/sello|filateli/, 'sello'], [/billete/, 'billete'],
   [/camiseta|ropa|bufanda|gorra|equipacion|textil/, 'camiseta'],
   [/liga|futbol|laliga/, 'balon'], [/selecci/, 'escudo'],
@@ -949,7 +993,8 @@ const ICON_GROUPS = [
   ['Deporte', ['balon', 'baloncesto', 'escudo', 'camiseta', 'zapatilla', 'trofeo', 'bandera', 'chapa']],
   ['Juguetes y transporte', ['osito', 'robot', 'coche', 'tren', 'avion', 'espacio', 'ancla']],
   ['Objetos y hogar', ['reloj', 'joya', 'llave', 'botella', 'lata', 'anfora', 'generico']],
-  ['Naturaleza y comida', ['planta', 'animales', 'fosil', 'manzana']]
+  ['Naturaleza y comida', ['planta', 'animales', 'fosil', 'manzana']],
+  ['Álbumes y personajes', ['sable', 'espadas', 'playmobil', 'varita', 'mascara', 'capa', 'muneca', 'roja', 'retratos', 'panal']]
 ];
 function buildIconPicker(boxId, inputId){
   const box = document.getElementById(boxId);
@@ -1974,9 +2019,63 @@ $('btn-gallery').onclick = async () => {
   const box = $('gallery-body'); box.innerHTML = '<p class="hint">Cargando fotos...</p>'; openModal('modal-gallery');
   const snap = await getDocs(collection(db, photosPath(currentCollectionId)));
   if (!snap.docs.length) { box.innerHTML = '<p class="hint">Aún no has subido fotos en esta colección. Abre una ficha (✎) y añade una foto.</p>'; return; }
-  box.innerHTML = snap.docs.map(d => { const it = currentItems.find(i => i.id === d.id); const cap = it ? ((it.codigo ? it.codigo + ' · ' : '') + (it.nombre || '')) : 'Foto';
+  box.innerHTML = snap.docs.map(d => { const it = currentItems.find(i => i.id === d.id); const cap = d.data().col ? (INFO_TIPOS[d.data().tipo] || 'Foto') : it ? ((it.codigo ? it.codigo + ' · ' : '') + (it.nombre || '')) : 'Foto';
     return `<figure data-cap="${escapeHtml(cap)}"><img src="${d.data().data}" alt=""><figcaption>${escapeHtml(cap)}</figcaption></figure>`; }).join('');
 };
+/* ---- Ficha de la colección: descripción + fotos (portada, checklist, otras) ---- */
+const INFO_TIPOS = { portada: 'Portada del álbum', checklist: 'Checklist', otra: 'Otra foto' };
+let infoPhotos = [];
+function renderInfoPhotos(){
+  Object.keys(INFO_TIPOS).forEach(t => {
+    const list = infoPhotos.filter(p => p.tipo === t);
+    $('info-ph-' + t).innerHTML = list.length
+      ? list.map(p => `<figure data-id="${p.id}"><img src="${p.data}" alt=""><button type="button" class="x" data-del="${p.id}" title="Quitar">✕</button></figure>`).join('')
+      : '<span class="hint">Sin fotos todavía</span>';
+  });
+}
+async function loadInfoPhotos(){
+  const cid = currentCollectionId;
+  $('info-ph-portada').innerHTML = $('info-ph-checklist').innerHTML = $('info-ph-otra').innerHTML = '<span class="hint">Cargando...</span>';
+  try {
+    const snap = await getDocs(query(collection(db, photosPath(cid)), where('col', '==', true)));
+    if (cid !== currentCollectionId) return;
+    infoPhotos = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.createdMs || 0) - (b.createdMs || 0));
+  } catch (err) { infoPhotos = []; showToast('No se pudieron cargar las fotos'); }
+  renderInfoPhotos();
+}
+$('btn-info').onclick = () => { $('info-desc').value = currentCollectionMeta.descripcion || ''; infoPhotos = []; openModal('modal-info'); loadInfoPhotos(); };
+$('info-save-desc').onclick = async () => {
+  const txt = $('info-desc').value.trim();
+  await updateDoc(doc(db, colPath(), currentCollectionId), { descripcion: txt });
+  currentCollectionMeta.descripcion = txt; renderDetailTitle(); showToast('Descripción guardada');
+};
+document.querySelectorAll('#modal-info input[type=file]').forEach(inp => inp.addEventListener('change', async e => {
+  const tipo = inp.dataset.tipo, files = [...e.target.files], cid = currentCollectionId;
+  e.target.value = '';
+  if (!files.length) return;
+  showToast('Guardando ' + (files.length > 1 ? files.length + ' fotos...' : 'la foto...'));
+  try {
+    if (tipo === 'portada') for (const p of infoPhotos.filter(p => p.tipo === 'portada')) await deleteDoc(doc(db, photosPath(cid), p.id));
+    for (let n = 0; n < files.length; n++) {
+      const data = await resizeImage(files[n], tipo === 'portada' ? 900 : 1200, 0.72);
+      const ms = Date.now() + n;
+      await setDoc(doc(db, photosPath(cid), `col_${tipo}_${ms}`), { col: true, tipo, data, createdMs: ms, updatedAt: serverTimestamp() });
+    }
+    showToast('Foto guardada');
+  } catch (err) { showToast('No se pudo guardar la foto'); }
+  if (cid === currentCollectionId) loadInfoPhotos();
+}));
+$('modal-info').addEventListener('click', async e => {
+  const del = e.target.closest('[data-del]');
+  if (del) {
+    e.stopPropagation();
+    if (!confirm('¿Quitar esta foto?')) return;
+    await deleteDoc(doc(db, photosPath(currentCollectionId), del.dataset.del)).catch(() => {});
+    infoPhotos = infoPhotos.filter(p => p.id !== del.dataset.del); renderInfoPhotos(); return;
+  }
+  const f = e.target.closest('figure');
+  if (f) { const p = infoPhotos.find(x => x.id === f.dataset.id); if (p) showLightbox(p.data, INFO_TIPOS[p.tipo]); }
+});
 $('gallery-body').addEventListener('click', e => { const f = e.target.closest('figure'); if (f) showLightbox(f.querySelector('img').src, f.dataset.cap); });
 
 /* =========================================================================
