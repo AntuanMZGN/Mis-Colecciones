@@ -311,6 +311,7 @@
   #progress .box{background:var(--panel);border:1px solid var(--brass);border-radius:12px;padding:22px 26px;min-width:280px;text-align:center;}
   #progress .pb{height:8px;background:var(--panel2);border-radius:4px;margin-top:12px;overflow:hidden;}
   #progress .pb>div{height:100%;background:var(--brass);width:0;transition:width .15s;}
+  .manual h3{margin:14px 0 4px;font-size:.98rem;} .manual p{margin:0;font-size:.88rem;line-height:1.5;color:var(--text);}
   .detail-desc{margin:4px 0 0;color:var(--muted);font-size:.88rem;white-space:pre-line;max-width:70ch;}
   .info-sec{margin:14px 0;} .info-sec h3{margin:0 0 6px;font-size:.95rem;}
   .info-photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:6px;}
@@ -361,7 +362,7 @@
       <div class="sub">Catalogación y seguimiento</div>
     </div>
     <div class="userbox">
-      <a class="btn small" href="manual.html" target="_blank" style="text-decoration:none;">📖 Manual</a>
+      <button class="btn small" type="button" onclick="openModal('modal-manual')">📖 Manual</button>
       <button class="btn small" id="btn-backup">💾 Copia de seguridad</button>
       <img id="user-avatar" src="" alt="">
       <span id="user-name"></span>
@@ -562,6 +563,33 @@
 <div class="backdrop" id="modal-gallery">
   <div class="modal wide"><button class="modal-close" onclick="closeModal('modal-gallery')">✕</button>
     <h2>Galería de fotos</h2><div id="gallery-body" class="gallery"></div></div>
+</div>
+
+<!-- Manual de uso -->
+<div class="backdrop" id="modal-manual">
+  <div class="modal wide"><button class="modal-close" onclick="closeModal('modal-manual')">✕</button>
+    <h2>Manual de uso</h2>
+    <div class="manual">
+      <h3>1. Crear una colección</h3>
+      <p>En la pantalla principal pulsa <b>+ Nueva colección</b>. Elige entre <b>lista</b> (cromos, cartas, monedas de una serie: cada elemento se marca como «tengo») o <b>ficha libre</b> (objetos sueltos con los campos que tú definas). La <b>Plantilla CROMOS</b> crea una colección de cromos lista para importar.</p>
+      <h3>2. Importar una lista</h3>
+      <p>Al crear una colección de lista puedes subir un archivo CSV o Excel con columnas <i>Codigo</i> y <i>Nombre</i> (puedes añadir más: país, año, valor...). Más tarde, en <b>⚙️ Ajustes → Actualizar desde un archivo</b>, puedes volver a importar sin perder tus marcas.</p>
+      <h3>3. Marcar lo que tienes</h3>
+      <p>En la tabla, marca la casilla <b>Tengo</b> de cada elemento y <b>Repe</b> si tienes copias de más. <b>Marcar todo / Desmarcar todo</b> actúan solo sobre lo que muestran los filtros.</p>
+      <h3>4. Buscar y filtrar</h3>
+      <p>Usa el buscador y los filtros (país, año, valor, estado...) justo encima de la tabla. El contador «por conseguir» cuenta los elementos que aún no tienes dentro de lo filtrado.</p>
+      <h3>5. Ficha y fotos de la colección</h3>
+      <p>En el menú <b>Ver y analizar → 📖 Ficha y fotos</b> puedes escribir una descripción y subir la foto de la portada del álbum, fotos de la checklist y otras fotos. Cada elemento también admite su propia foto desde su ficha (✎).</p>
+      <h3>6. Informes</h3>
+      <p>El menú <b>Informes</b> genera el listado, la checklist o el resumen por valor en <b>PDF o Excel</b>; desde ahí puedes imprimirlos.</p>
+      <h3>7. Ajustes de la colección</h3>
+      <p>En <b>⚙️ Ajustes</b> cambias el nombre, el icono, la categoría, editas las columnas, exportas a CSV/Excel o eliminas la colección.</p>
+      <h3>8. Copia de seguridad</h3>
+      <p>El botón <b>Copia de seguridad</b> descarga todo (colecciones, marcas, fotos e historial) en un archivo. Se recomienda hacerlo una vez al mes.</p>
+      <h3>9. Deshacer</h3>
+      <p>Tras muchos cambios aparece un aviso con <b>Deshacer</b> unos segundos; en los formularios hay también un botón ↩️ Deshacer.</p>
+    </div>
+  </div>
 </div>
 
 <!-- Ficha de la colección: descripción y fotos -->
