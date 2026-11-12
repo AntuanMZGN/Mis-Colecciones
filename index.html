@@ -313,8 +313,10 @@
   #progress .pb>div{height:100%;background:var(--brass);width:0;transition:width .15s;}
   .manual h3{margin:14px 0 4px;font-size:.98rem;} .manual p{margin:0;font-size:.88rem;line-height:1.5;color:var(--text);}
   #detail-bg{position:fixed;inset:0;z-index:-1;display:none;pointer-events:none;overflow:hidden;}
-  #detail-bg .bg-img{position:absolute;inset:-30px;background-size:cover;background-position:center;filter:blur(16px) saturate(.85);opacity:.5;}
-  #detail-bg::after{content:'';position:absolute;inset:0;background:color-mix(in srgb,var(--ink) 62%,transparent);}
+  body.con-fondo .table-wrap{background:color-mix(in srgb,var(--panel) 90%,transparent);backdrop-filter:blur(2px);}
+  body.con-fondo .crumbs,body.con-fondo #detail-desc,body.con-fondo .table-wrap ~ *{text-shadow:0 0 6px var(--ink),0 0 2px var(--ink);}
+  #detail-bg .bg-img{position:absolute;inset:-8px;background-size:cover;background-position:center;filter:blur(2.5px);}
+  #detail-bg::after{content:'';position:absolute;inset:0;background:color-mix(in srgb,var(--ink) 45%,transparent);}
   .detail-desc{margin:4px 0 0;color:var(--muted);font-size:.88rem;white-space:pre-line;max-width:70ch;}
   .info-sec{margin:14px 0;} .info-sec h3{margin:0 0 6px;font-size:.95rem;}
   .info-photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:6px;}
@@ -789,7 +791,7 @@ function navList(){
   if (unsubItems) { unsubItems(); unsubItems = null; }
   document.getElementById('view-list').style.display = 'block';
   document.getElementById('view-detail').style.display = 'none';
-  fondoToken++; document.getElementById('detail-bg').style.display = 'none';
+  fondoToken++; document.getElementById('detail-bg').style.display = 'none'; document.body.classList.remove('con-fondo');
   renderCrumbs();
   renderCollectionsGrid();
 }
@@ -2054,7 +2056,8 @@ let fondoToken = 0;
 async function applyFondo(){
   const bg = $('detail-bg'), tok = ++fondoToken, cid = currentCollectionId;
   const modo = currentCollectionMeta && currentCollectionMeta.fondoModo || 'none';
-  if (!cid || modo === 'none') { bg.style.display = 'none'; return; }
+  const off = () => { bg.style.display = 'none'; document.body.classList.remove('con-fondo'); };
+  if (!cid || modo === 'none') { off(); return; }
   const tipo = modo === 'portada' ? 'portada' : 'fondo';
   let data = null;
   try {
@@ -2063,9 +2066,9 @@ async function applyFondo(){
     data = fotos[0] ? fotos[0].data : null;
   } catch (err) { data = null; }
   if (tok !== fondoToken || cid !== currentCollectionId) return;
-  if (!data) { bg.style.display = 'none'; return; }
+  if (!data) { off(); return; }
   bg.querySelector('.bg-img').style.backgroundImage = 'url("' + data + '")';
-  bg.style.display = 'block';
+  bg.style.display = 'block'; document.body.classList.add('con-fondo');
 }
 document.querySelectorAll('input[name=fondo-modo]').forEach(r => r.addEventListener('change', async () => {
   const v = r.value, cid = currentCollectionId;
