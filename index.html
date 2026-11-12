@@ -312,6 +312,9 @@
   #progress .pb{height:8px;background:var(--panel2);border-radius:4px;margin-top:12px;overflow:hidden;}
   #progress .pb>div{height:100%;background:var(--brass);width:0;transition:width .15s;}
   .manual h3{margin:14px 0 4px;font-size:.98rem;} .manual p{margin:0;font-size:.88rem;line-height:1.5;color:var(--text);}
+  #detail-bg{position:fixed;inset:0;z-index:-1;display:none;pointer-events:none;overflow:hidden;}
+  #detail-bg .bg-img{position:absolute;inset:-30px;background-size:cover;background-position:center;filter:blur(16px) saturate(.85);opacity:.5;}
+  #detail-bg::after{content:'';position:absolute;inset:0;background:color-mix(in srgb,var(--ink) 62%,transparent);}
   .detail-desc{margin:4px 0 0;color:var(--muted);font-size:.88rem;white-space:pre-line;max-width:70ch;}
   .info-sec{margin:14px 0;} .info-sec h3{margin:0 0 6px;font-size:.95rem;}
   .info-photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:6px;}
@@ -370,14 +373,14 @@
     </div>
   </header>
 
-  <div class="wrap">
+  <div id="detail-bg" aria-hidden="true"><div class="bg-img"></div></div>
+<div class="wrap">
     <div class="crumbs" id="crumbs"></div>
 
     <!-- Vista: listado de colecciones -->
     <div id="view-list">
       <div class="toolbar">
         <button class="btn primary" id="btn-new-collection">+ Nueva colección</button>
-        <button class="btn" id="btn-cromos-template">🎴 Plantilla CROMOS</button>
       </div>
       <datalist id="dl-categorias"></datalist>
       <datalist id="dl-subcategorias"></datalist>
@@ -571,7 +574,7 @@
     <h2>Manual de uso</h2>
     <div class="manual">
       <h3>1. Crear una colección</h3>
-      <p>En la pantalla principal pulsa <b>+ Nueva colección</b>. Elige entre <b>lista</b> (cromos, cartas, monedas de una serie: cada elemento se marca como «tengo») o <b>ficha libre</b> (objetos sueltos con los campos que tú definas). La <b>Plantilla CROMOS</b> crea una colección de cromos lista para importar.</p>
+      <p>En la pantalla principal pulsa <b>+ Nueva colección</b>. Elige entre <b>lista</b> (cromos, cartas, monedas de una serie: cada elemento se marca como «tengo») o <b>ficha libre</b> (objetos sueltos con los campos que tú definas).</p>
       <h3>2. Importar una lista</h3>
       <p>Al crear una colección de lista puedes subir un archivo CSV o Excel con columnas <i>Codigo</i> y <i>Nombre</i> (puedes añadir más: país, año, valor...). Más tarde, en <b>⚙️ Ajustes → Actualizar desde un archivo</b>, puedes volver a importar sin perder tus marcas.</p>
       <h3>3. Marcar lo que tienes</h3>
@@ -579,7 +582,7 @@
       <h3>4. Buscar y filtrar</h3>
       <p>Usa el buscador y los filtros (país, año, valor, estado...) justo encima de la tabla. El contador «por conseguir» cuenta los elementos que aún no tienes dentro de lo filtrado.</p>
       <h3>5. Ficha y fotos de la colección</h3>
-      <p>En el menú <b>Ver y analizar → 📖 Ficha y fotos</b> puedes escribir una descripción y subir la foto de la portada del álbum, fotos de la checklist y otras fotos. Cada elemento también admite su propia foto desde su ficha (✎).</p>
+      <p>En el menú <b>Ver y analizar → 📖 Ficha y fotos</b> puedes escribir una descripción y subir la foto de la portada del álbum, fotos de la checklist y otras fotos, y elegir un <b>fondo</b> difuminado para la colección (la portada u otra foto tuya). Cada elemento también admite su propia foto desde su ficha (✎).</p>
       <h3>6. Informes</h3>
       <p>El menú <b>Informes</b> genera el listado, la checklist o el resumen por valor en <b>PDF o Excel</b>; desde ahí puedes imprimirlos.</p>
       <h3>7. Ajustes de la colección</h3>
@@ -606,6 +609,15 @@
       <label class="btn small file-btn">+ Añadir fotos<input type="file" accept="image/*" multiple data-tipo="checklist"></label></div>
     <div class="info-sec"><h3>🖼️ Otras fotos</h3><div class="info-photos" id="info-ph-otra"></div>
       <label class="btn small file-btn">+ Añadir fotos<input type="file" accept="image/*" multiple data-tipo="otra"></label></div>
+    <div class="info-sec"><h3>🎨 Fondo de la colección</h3>
+      <p class="hint" style="margin:0 0 6px;">Se ve difuminado y atenuado detrás de la tabla, para que no estorbe al leer.</p>
+      <div id="fondo-opts" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;">
+        <label><input type="radio" name="fondo-modo" value="none"> Sin fondo</label>
+        <label><input type="radio" name="fondo-modo" value="portada"> Usar la portada del álbum (la de arriba)</label>
+        <label><input type="radio" name="fondo-modo" value="foto"> Usar otra foto que yo suba</label>
+      </div>
+      <div class="info-photos" id="info-ph-fondo"></div>
+      <label class="btn small file-btn">+ Subir foto de fondo<input type="file" accept="image/*" data-tipo="fondo"></label></div>
     <p class="hint">Las fotos se guardan reducidas de tamaño y también aparecen en la Galería.</p>
   </div>
 </div>
@@ -777,6 +789,7 @@ function navList(){
   if (unsubItems) { unsubItems(); unsubItems = null; }
   document.getElementById('view-list').style.display = 'block';
   document.getElementById('view-detail').style.display = 'none';
+  fondoToken++; document.getElementById('detail-bg').style.display = 'none';
   renderCrumbs();
   renderCollectionsGrid();
 }
@@ -827,6 +840,7 @@ function openCollection(cid){
   // El marcado masivo («tengo») solo tiene sentido en colecciones de lista.
   document.getElementById('panel-masivo').style.display = currentCollectionMeta.type === 'checklist' ? '' : 'none';
   listenItems(cid);
+  applyFondo();
 }
 function renderDetailTitle(){
   document.getElementById('detail-title').innerHTML =
@@ -1100,7 +1114,6 @@ function renderCollectionsGrid(){
   const empty = document.getElementById('collections-empty');
   updateCategoryDatalists();
   grid.className = 'grid-cols';
-  document.getElementById('btn-cromos-template').style.display = navCategoria ? 'none' : '';
 
   // Dentro de una categoría: mostramos sus subcategorías como carpetas.
   if (navCategoria && !navSubcategoria) {
@@ -1144,44 +1157,6 @@ document.getElementById('btn-new-collection').onclick = () => {
   openModal('modal-new-collection');
 };
 
-/* =========================================================================
-   PLANTILLA "CROMOS": crea de una vez la estructura de categoría/subcategoría
-   solicitada, con colecciones vacías de tipo checklist (código + nombre,
-   listas para ir marcando Tengo/Repe), cada una ya etiquetada con su
-   categoría y subcategoría. Los nombres de ejemplo se pueden renombrar o
-   borrar luego sin problema: la estructura (categoría > subcategoría) es lo
-   que se conserva.
-   ========================================================================= */
-const CROMOS_TEMPLATE = [
-  { sub: 'Fantasía y Rol', items: ['Fantasy Riders (Temporada 1)', 'Fantasy Riders (Temporada 2)', 'Fantasy Riders (Temporada 3)', 'Fantasy Riders (Temporada 4)'] },
-  { sub: 'Deportes (Ligas)', items: ['La Liga española 2024-2025'] },
-  { sub: 'Deportes (Selecciones)', items: ['Selección española 2025', 'Selección española 2026'] },
-  { sub: 'Cine, Animación y Ficción', items: ['Bola de Dragón', 'Harry Potter', 'Personajes Disney'] },
-  { sub: 'Cómics y Superhéroes', items: ['Villanos DC', 'Personajes de Marvel'] },
-  { sub: 'Otros', items: ['Trivia Alimentos'] }
-];
-async function createCromosTemplate(){
-  const existingNames = new Set(collectionsCache.map(c => norm(c.name)));
-  const toCreate = [];
-  CROMOS_TEMPLATE.forEach(({ sub, items }) => items.forEach(name => {
-    if (!existingNames.has(norm(name))) toCreate.push({ name, sub });
-  }));
-  if (!toCreate.length) { showToast('Ya tienes creadas todas las colecciones de la plantilla CROMOS'); return; }
-  const listado = toCreate.map(t => `• ${t.name}  —  ${t.sub}`).join('\n');
-  if (!confirm(`Se crearán ${toCreate.length} colecciones nuevas, vacías, dentro de la categoría "CROMOS":\n\n${listado}\n\n(Las que ya tengas creadas con el mismo nombre no se duplican.) ¿Continuar?`)) return;
-  try {
-    progress('Creando estructura CROMOS...', 0, toCreate.length);
-    const ops = toCreate.map(t => ([
-      'set',
-      doc(collection(db, colPath())),
-      { name: t.name, icon: 'svg:' + (guessIconKey(t.sub, t.name) || 'cromos'), type: 'checklist', categoria: 'CROMOS', subcategoria: t.sub, fields: [], stats: { total: 0, tengo: 0 }, createdAt: serverTimestamp() }
-    ]));
-    await commitOps(ops, 'Creando estructura CROMOS...');
-    showToast(`${toCreate.length} colecciones creadas en «CROMOS»`);
-    openCategoryNav('CROMOS');
-  } finally { endProgress(); }
-}
-document.getElementById('btn-cromos-template').onclick = createCromosTemplate;
 buildIconPicker('nc-icons', 'nc-icon');
 buildIconPicker('set-icons', 'set-icon');
 
@@ -2051,7 +2026,8 @@ $('btn-gallery').onclick = async () => {
     return `<figure data-cap="${escapeHtml(cap)}"><img src="${d.data().data}" alt=""><figcaption>${escapeHtml(cap)}</figcaption></figure>`; }).join('');
 };
 /* ---- Ficha de la colección: descripción + fotos (portada, checklist, otras) ---- */
-const INFO_TIPOS = { portada: 'Portada del álbum', checklist: 'Checklist', otra: 'Otra foto' };
+const INFO_TIPOS = { portada: 'Portada del álbum', checklist: 'Checklist', otra: 'Otra foto', fondo: 'Foto de fondo' };
+const INFO_UNICAS = ['portada', 'fondo'];
 let infoPhotos = [];
 function renderInfoPhotos(){
   Object.keys(INFO_TIPOS).forEach(t => {
@@ -2063,7 +2039,7 @@ function renderInfoPhotos(){
 }
 async function loadInfoPhotos(){
   const cid = currentCollectionId;
-  $('info-ph-portada').innerHTML = $('info-ph-checklist').innerHTML = $('info-ph-otra').innerHTML = '<span class="hint">Cargando...</span>';
+  $('info-ph-portada').innerHTML = $('info-ph-checklist').innerHTML = $('info-ph-otra').innerHTML = $('info-ph-fondo').innerHTML = '<span class="hint">Cargando...</span>';
   try {
     const snap = await getDocs(query(collection(db, photosPath(cid)), where('col', '==', true)));
     if (cid !== currentCollectionId) return;
@@ -2071,7 +2047,34 @@ async function loadInfoPhotos(){
   } catch (err) { infoPhotos = []; showToast('No se pudieron cargar las fotos'); }
   renderInfoPhotos();
 }
-$('btn-info').onclick = () => { $('info-desc').value = currentCollectionMeta.descripcion || ''; infoPhotos = []; openModal('modal-info'); loadInfoPhotos(); };
+$('btn-info').onclick = () => { $('info-desc').value = currentCollectionMeta.descripcion || '';
+  const fm = currentCollectionMeta.fondoModo || 'none'; document.querySelectorAll('input[name=fondo-modo]').forEach(r => r.checked = r.value === fm); infoPhotos = []; openModal('modal-info'); loadInfoPhotos(); };
+/* ---- Fondo difuminado de la colección ---- */
+let fondoToken = 0;
+async function applyFondo(){
+  const bg = $('detail-bg'), tok = ++fondoToken, cid = currentCollectionId;
+  const modo = currentCollectionMeta && currentCollectionMeta.fondoModo || 'none';
+  if (!cid || modo === 'none') { bg.style.display = 'none'; return; }
+  const tipo = modo === 'portada' ? 'portada' : 'fondo';
+  let data = null;
+  try {
+    const snap = await getDocs(query(collection(db, photosPath(cid)), where('col', '==', true)));
+    const fotos = snap.docs.map(d => d.data()).filter(d => d.tipo === tipo).sort((a, b) => (b.createdMs || 0) - (a.createdMs || 0));
+    data = fotos[0] ? fotos[0].data : null;
+  } catch (err) { data = null; }
+  if (tok !== fondoToken || cid !== currentCollectionId) return;
+  if (!data) { bg.style.display = 'none'; return; }
+  bg.querySelector('.bg-img').style.backgroundImage = 'url("' + data + '")';
+  bg.style.display = 'block';
+}
+document.querySelectorAll('input[name=fondo-modo]').forEach(r => r.addEventListener('change', async () => {
+  const v = r.value, cid = currentCollectionId;
+  await updateDoc(doc(db, colPath(), cid), { fondoModo: v });
+  currentCollectionMeta.fondoModo = v;
+  if (v === 'portada' && !infoPhotos.some(p => p.tipo === 'portada')) showToast('Aún no has subido la portada: súbela en «Portada del álbum»');
+  if (v === 'foto' && !infoPhotos.some(p => p.tipo === 'fondo')) showToast('Sube la foto con «Subir foto de fondo»');
+  applyFondo();
+}));
 $('info-save-desc').onclick = async () => {
   const txt = $('info-desc').value.trim();
   await updateDoc(doc(db, colPath(), currentCollectionId), { descripcion: txt });
@@ -2083,15 +2086,19 @@ document.querySelectorAll('#modal-info input[type=file]').forEach(inp => inp.add
   if (!files.length) return;
   showToast('Guardando ' + (files.length > 1 ? files.length + ' fotos...' : 'la foto...'));
   try {
-    if (tipo === 'portada') for (const p of infoPhotos.filter(p => p.tipo === 'portada')) await deleteDoc(doc(db, photosPath(cid), p.id));
+    if (INFO_UNICAS.includes(tipo)) for (const p of infoPhotos.filter(p => p.tipo === tipo)) await deleteDoc(doc(db, photosPath(cid), p.id));
     for (let n = 0; n < files.length; n++) {
-      const data = await resizeImage(files[n], tipo === 'portada' ? 900 : 1200, 0.72);
+      const data = await resizeImage(files[n], tipo === 'portada' ? 900 : tipo === 'fondo' ? 1000 : 1200, tipo === 'fondo' ? 0.6 : 0.72);
       const ms = Date.now() + n;
       await setDoc(doc(db, photosPath(cid), `col_${tipo}_${ms}`), { col: true, tipo, data, createdMs: ms, updatedAt: serverTimestamp() });
     }
+    if (tipo === 'fondo') {
+      await updateDoc(doc(db, colPath(), cid), { fondoModo: 'foto' });
+      if (cid === currentCollectionId) { currentCollectionMeta.fondoModo = 'foto'; document.querySelectorAll('input[name=fondo-modo]').forEach(r => r.checked = r.value === 'foto'); }
+    }
     showToast('Foto guardada');
   } catch (err) { showToast('No se pudo guardar la foto'); }
-  if (cid === currentCollectionId) loadInfoPhotos();
+  if (cid === currentCollectionId) { await loadInfoPhotos(); applyFondo(); }
 }));
 $('modal-info').addEventListener('click', async e => {
   const del = e.target.closest('[data-del]');
@@ -2099,7 +2106,7 @@ $('modal-info').addEventListener('click', async e => {
     e.stopPropagation();
     if (!confirm('¿Quitar esta foto?')) return;
     await deleteDoc(doc(db, photosPath(currentCollectionId), del.dataset.del)).catch(() => {});
-    infoPhotos = infoPhotos.filter(p => p.id !== del.dataset.del); renderInfoPhotos(); return;
+    infoPhotos = infoPhotos.filter(p => p.id !== del.dataset.del); renderInfoPhotos(); applyFondo(); return;
   }
   const f = e.target.closest('figure');
   if (f) { const p = infoPhotos.find(x => x.id === f.dataset.id); if (p) showLightbox(p.data, INFO_TIPOS[p.tipo]); }
