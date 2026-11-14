@@ -312,6 +312,11 @@
   #progress .pb{height:8px;background:var(--panel2);border-radius:4px;margin-top:12px;overflow:hidden;}
   #progress .pb>div{height:100%;background:var(--brass);width:0;transition:width .15s;}
   .manual h3{margin:14px 0 4px;font-size:.98rem;} .manual p{margin:0;font-size:.88rem;line-height:1.5;color:var(--text);}
+  .copy-tabs{display:none;gap:6px;overflow-x:auto;scroll-snap-type:x proximity;padding:2px 0 10px;margin-bottom:4px;-webkit-overflow-scrolling:touch;}
+  .copy-tabs button{flex:0 0 auto;scroll-snap-align:start;white-space:nowrap;border:1px solid var(--border);background:var(--panel2);color:var(--text);border-radius:999px;padding:7px 14px;font:inherit;font-size:.85rem;cursor:pointer;}
+  .copy-tabs button small{color:var(--muted);margin-left:6px;}
+  .copy-tabs button.on{background:var(--btn-bg);color:var(--btn-fg);border-color:var(--btn-bg);} .copy-tabs button.on small{color:inherit;opacity:.8;}
+  .copy-tabs button.add{border-style:dashed;background:transparent;color:var(--muted);}
   #detail-bg{position:fixed;inset:0;z-index:-1;display:none;pointer-events:none;overflow:hidden;}
   body.con-fondo .table-wrap{background:color-mix(in srgb,var(--panel) 90%,transparent);backdrop-filter:blur(2px);}
   body.con-fondo .crumbs,body.con-fondo #detail-desc,body.con-fondo .table-wrap ~ *{text-shadow:0 0 6px var(--ink),0 0 2px var(--ink);}
@@ -394,6 +399,7 @@
 
     <!-- Vista: detalle de una colección -->
     <div id="view-detail" style="display:none;">
+      <div class="copy-tabs" id="copy-tabs"></div>
       <div class="detail-header-row">
         <h2 id="detail-title" style="font-size:1.6rem;color:var(--text);"></h2>
         <p class="detail-desc" id="detail-desc" style="display:none;"></p>
@@ -514,6 +520,7 @@
     <div class="field"><label>Nombre</label><input id="set-name"></div>
     <div class="field"><label>Icono</label><input id="set-icon" type="hidden">
       <div class="icon-picker" id="set-icons"></div></div>
+    <div class="field" id="set-copia-wrap" style="display:none;"><label>Nombre de la pestaña de esta copia</label><input id="set-copia-label" placeholder="Ej. Copia de mi hermano"></div>
     <div class="field" id="set-valor-fijo-wrap" style="display:none;">
       <label>Valor facial fijo (opcional)</label>
       <input id="set-valor-fijo" placeholder="Ej: 2 € — déjalo vacío si cada elemento tiene su propio valor">
@@ -593,7 +600,7 @@
       <h3>8. Copia de seguridad</h3>
       <p>El botón <b>Copia de seguridad</b> descarga todo (colecciones, marcas, fotos e historial) en un archivo. Se recomienda hacerlo una vez al mes.</p>
       <h3>9. Tener varias copias de una colección</h3>
-      <p>Si tienes el mismo álbum repetido, abre la colección y ve a <b>⚙️ Ajustes → 📑 Crear otra copia</b>. Se crea una colección nueva con los mismos elementos pero sin marcar, que se rellena aparte. Cada copia lleva su propia foto, descripción y fondo.</p>
+      <p>Si tienes el mismo álbum repetido, abre la colección y ve a <b>⚙️ Ajustes → 📑 Crear otra copia</b> (o pulsa «＋ Añadir copia»). La colección sigue siendo una sola en el listado; dentro aparecen unas <b>pestañas</b> arriba (Principal, Copia 2, Copia 3...) que puedes recorrer deslizando hacia la derecha. Cada copia se rellena por separado y lleva su propia foto, descripción y fondo. En Ajustes puedes cambiar el nombre de la pestaña.</p>
       <h3>10. Deshacer</h3>
       <p>Tras muchos cambios aparece un aviso con <b>Deshacer</b> unos segundos; en los formularios hay también un botón ↩️ Deshacer.</p>
     </div>
@@ -855,6 +862,7 @@ function openCollection(cid){
   applyFondo();
 }
 function renderDetailTitle(){
+  renderCopyTabs();
   document.getElementById('detail-title').innerHTML =
     `<span class="title-with-icon">${collectionIconHtml(currentCollectionMeta, 'md')}<span>${escapeHtml(currentCollectionMeta.name)}</span></span>`;
   const dd = document.getElementById('detail-desc');
@@ -866,10 +874,50 @@ window.openCollection = openCollection;
 /* =========================================================================
    COLECCIONES: listado en vivo
    ========================================================================= */
+/* ---- Copias de una misma colección: se agrupan bajo una sola entrada ---- */
+const RE_COPIA = /^(.*?)\s*\(copia\s*(\d+)\)\s*$/i;
+function agruparColecciones(){
+  const porId = new Map(collectionsCache.map(c => [c.id, c]));
+  const mismoSitio = (a, b) => (a.categoria || '') === (b.categoria || '') && (a.subcategoria || '') === (b.subcategoria || '');
+  collectionsCache.forEach(c => {
+    let gid = c.id, n = 0;
+    if (c.grupoId && c.grupoId !== c.id && porId.has(c.grupoId)) { gid = c.grupoId; n = c.copiaN || 0; }
+    else {
+      const m = RE_COPIA.exec(c.name || '');   // copias antiguas creadas sin grupo: «Nombre (copia 2)»
+      if (m) {
+        const base = collectionsCache.find(o => o.id !== c.id && !RE_COPIA.test(o.name || '') && norm(o.name) === norm(m[1]) && mismoSitio(o, c));
+        if (base) { gid = base.id; n = parseInt(m[2], 10) || 0; }
+      }
+    }
+    c._gid = gid; c._n = n;
+  });
+  const grupos = new Map();
+  collectionsCache.forEach(c => { if (!grupos.has(c._gid)) grupos.set(c._gid, []); grupos.get(c._gid).push(c); });
+  grupos.forEach((miembros, gid) => {
+    miembros.sort((a, b) => (a.id === gid ? -1 : b.id === gid ? 1 : (a._n || 999) - (b._n || 999)));
+    miembros.forEach((c, i) => { c._group = miembros; c._pos = i; c._label = c.copiaEtiqueta || (i === 0 ? 'Principal' : 'Copia ' + (i + 1)); });
+  });
+}
+const principales = () => collectionsCache.filter(c => c._gid === c.id);
+function renderCopyTabs(){
+  const box = $('copy-tabs'), m = currentCollectionMeta, g = m && m._group;
+  if (!g || g.length < 2) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.innerHTML = g.map(c => {
+    const t = c.stats?.total || 0, k = c.stats?.tengo || 0;
+    return `<button type="button" data-copy="${c.id}" class="${c.id === currentCollectionId ? 'on' : ''}">${escapeHtml(c._label)}<small>${c.type === 'libre' ? t : k + '/' + t}</small></button>`;
+  }).join('') + '<button type="button" class="add" data-copy="__new">＋ Añadir copia</button>';
+  box.style.display = 'flex';
+  const on = box.querySelector('.on'); if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+document.getElementById('copy-tabs').addEventListener('click', e => {
+  const b = e.target.closest('[data-copy]'); if (!b) return;
+  if (b.dataset.copy === '__new') crearCopia(); else if (b.dataset.copy !== currentCollectionId) openCollection(b.dataset.copy);
+});
 function listenCollections(){
   const q = query(collection(db, colPath()), orderBy('createdAt', 'asc'));
   unsubCollections = onSnapshot(q, (snap) => {
     collectionsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    agruparColecciones();
     if (!currentCollectionId) renderCollectionsGrid();
     if (currentCollectionId) {
       currentCollectionMeta = collectionsCache.find(c => c.id === currentCollectionId) || currentCollectionMeta;
@@ -1081,7 +1129,7 @@ function collectionCardHtml(c){
       ${collectionIconHtml(c, 'lg')}
       <div>
         <h3>${escapeHtml(c.name)}</h3>
-        <div class="meta">${c.type === 'libre' ? `${total} elementos` : `${tengo}/${total} (${pct}%)`}</div>
+        <div class="meta">${c.type === 'libre' ? `${total} elementos` : `${tengo}/${total} (${pct}%)`}${c._group && c._group.length > 1 ? ` · 📑 ${c._group.length} copias` : ''}</div>
         ${c.type !== 'libre' ? `<div class="bar"><div style="width:${pct}%;"></div></div>` : ''}
       </div>
     </div>`;
@@ -1090,7 +1138,7 @@ function collectionCardHtml(c){
 // normal en el listado principal, pero al pulsarla entra en sus subcategorías
 // en vez de abrir elementos.
 function categoryCardHtml(cat){
-  const cols = collectionsCache.filter(c => c.categoria === cat);
+  const cols = principales().filter(c => c.categoria === cat);
   const subs = new Set(cols.map(c => c.subcategoria || 'Otros'));
   return `
     <div class="col-card" data-nav="cat" data-cat="${escapeHtml(cat)}">
@@ -1102,7 +1150,7 @@ function categoryCardHtml(cat){
     </div>`;
 }
 function subcategoryCardHtml(cat, sub){
-  const cols = collectionsCache.filter(c => c.categoria === cat && (c.subcategoria || 'Otros') === sub);
+  const cols = principales().filter(c => c.categoria === cat && (c.subcategoria || 'Otros') === sub);
   const key = guessIconKey(sub) || 'generico';
   return `
     <div class="col-card" data-nav="sub" data-cat="${escapeHtml(cat)}" data-sub="${escapeHtml(sub)}">
@@ -1137,7 +1185,7 @@ function renderCollectionsGrid(){
   }
   // Dentro de una subcategoría: aquí es donde aparecen las colecciones reales.
   if (navCategoria && navSubcategoria) {
-    const cols = collectionsCache.filter(c => c.categoria === navCategoria && (c.subcategoria || 'Otros') === navSubcategoria);
+    const cols = principales().filter(c => c.categoria === navCategoria && (c.subcategoria || 'Otros') === navSubcategoria);
     empty.style.display = cols.length ? 'none' : 'block';
     if (empty.style.display === 'block') empty.textContent = 'Aún no tienes ninguna colección aquí. Crea la primera con "+ Nueva colección".';
     grid.innerHTML = cols.map(collectionCardHtml).join('');
@@ -1147,7 +1195,7 @@ function renderCollectionsGrid(){
   // Raíz: categorías (carpetas) + colecciones sin categoría, todo al mismo
   // nivel — una categoría se ve y se comporta como una colección más.
   const cats = [...new Set(collectionsCache.filter(c => c.categoria).map(c => c.categoria))].sort((a, b) => a.localeCompare(b, 'es'));
-  const loose = collectionsCache.filter(c => !c.categoria);
+  const loose = principales().filter(c => !c.categoria);
   if (!cats.length && !loose.length) {
     empty.textContent = 'Aún no tienes ninguna colección. Crea la primera con "+ Nueva colección".';
     empty.style.display = 'block'; grid.innerHTML = ''; return;
@@ -2827,6 +2875,9 @@ document.getElementById('btn-collection-settings').onclick = () => {
   $('set-valor-fijo').value = currentCollectionMeta.valorFijo ?? '';
   $('set-categoria').value = currentCollectionMeta.categoria || '';
   $('set-subcategoria').value = currentCollectionMeta.subcategoria || '';
+  const varias = currentCollectionMeta._group && currentCollectionMeta._group.length > 1;
+  $('set-copia-wrap').style.display = varias ? '' : 'none';
+  $('set-copia-label').value = currentCollectionMeta.copiaEtiqueta || '';
   if (settingsFormUndo) settingsFormUndo.reset();
   openModal('modal-settings');
 };
@@ -2838,6 +2889,7 @@ async function saveCollectionSettings(){
   // "Automático" (vacío) conserva el emoji antiguo si lo había.
   const iconNuevo = $('set-icon').value || iconPlain(currentCollectionMeta.icon);
   await updateDoc(doc(db, colPath(), cid), { name: $('set-name').value, icon: iconNuevo, valorFijo: vf, categoria: $('set-categoria').value.trim(), subcategoria: $('set-subcategoria').value.trim() });
+  if ($('set-copia-wrap').style.display !== 'none') await updateDoc(doc(db, colPath(), cid), { copiaEtiqueta: $('set-copia-label').value.trim() });
   closeModal('modal-settings');
   showToast('Colección actualizada', async () => { await updateDoc(doc(db, colPath(), cid), before); });
 }
@@ -2867,13 +2919,14 @@ $('act-fields').onclick = () => {
   renderFieldsEditor(); openModal('modal-libre-fields');
 };
 $('act-update').onclick = () => { closeModal('modal-settings'); openImport('update'); };
-$('act-dup').onclick = async () => {
+$('act-dup').onclick = () => { closeModal('modal-settings'); crearCopia(); };
+async function crearCopia(){
   const meta = currentCollectionMeta, src = currentCollectionId;
-  const base = String(meta.name).replace(/\s*\(copia \d+\)\s*$/i, '');
-  const usados = collectionsCache.filter(c => norm(c.name).startsWith(norm(base)) ).length;
-  const nombre = prompt('Nombre de la nueva copia:\n(Tendrá los mismos elementos, pero todo sin marcar y totalmente independiente de esta colección)', `${base} (copia ${usados + 1})`);
+  const principal = (meta._group && meta._group[0]) || meta;
+  const base = String(principal.name).replace(/\s*\(copia \d+\)\s*$/i, '');
+  const siguiente = (meta._group ? meta._group.length : 1) + 1;
+  const nombre = prompt('Nombre de la nueva copia:\n(Tendrá los mismos elementos, pero todo sin marcar y totalmente independiente de las demás copias)', `${base} (copia ${siguiente})`);
   if (!nombre || !nombre.trim()) return;
-  closeModal('modal-settings');
   try {
     progress('Creando la copia...', 0, 1);
     const esLista = meta.type !== 'libre';
@@ -2881,7 +2934,7 @@ $('act-dup').onclick = async () => {
     const ref = await addDoc(collection(db, colPath()), {
       name: nombre.trim(), icon: meta.icon || '', type: meta.type || 'checklist', categoria: meta.categoria || '', subcategoria: meta.subcategoria || '',
       fields: (meta.fields || []).map(f => ({ ...f })), ...(meta.valorFijo ? { valorFijo: meta.valorFijo } : {}),
-      descripcion: meta.descripcion || '', stats: { total: items.length, tengo: 0 }, createdAt: serverTimestamp()
+      descripcion: meta.descripcion || '', grupoId: principal.id, copiaN: siguiente, stats: { total: items.length, tengo: 0 }, createdAt: serverTimestamp()
     });
     const ops = items.map((it, n) => ['set', doc(collection(db, itemsPath(ref.id))), { codigo: it.codigo, nombre: it.nombre || '', campos: { ...(it.campos || {}) }, tengo: false, repetido: false, notas: '', tieneFoto: false, orden: typeof it.orden === 'number' ? it.orden : n + 1, createdAt: serverTimestamp() }]);
     await commitOps(ops, 'Creando la copia...');
@@ -2889,7 +2942,7 @@ $('act-dup').onclick = async () => {
     showToast(esLista ? `Copia creada con ${items.length} elementos sin marcar` : 'Copia creada (vacía, con las mismas columnas)');
     openCollection(ref.id);
   } catch (err) { endProgress(); showToast('No se pudo crear la copia'); }
-};
+}
 $('act-stats').onclick = async () => { await syncStats(true); closeModal('modal-settings'); showToast('Contadores recalculados'); };
 
 /* =========================================================================
