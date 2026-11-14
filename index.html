@@ -787,14 +787,19 @@ function snapshotsPath(cid){ return `users/${uid()}/collections/${cid}/snapshots
 /* =========================================================================
    NAVEGACIÓN
    ========================================================================= */
-function navList(){
+// Sale de la colección abierta (si hay una) y vuelve a mostrar el listado.
+function leaveDetail(){
   flushStatsSync();
   currentCollectionId = null;
-  navCategoria = null; navSubcategoria = null;
   if (unsubItems) { unsubItems(); unsubItems = null; }
   document.getElementById('view-list').style.display = 'block';
   document.getElementById('view-detail').style.display = 'none';
+  document.body.classList.remove('in-detail');
   fondoToken++; document.getElementById('detail-bg').style.display = 'none'; document.body.classList.remove('con-fondo');
+}
+function navList(){
+  leaveDetail();
+  navCategoria = null; navSubcategoria = null;
   renderCrumbs();
   renderCollectionsGrid();
 }
@@ -802,12 +807,14 @@ function navList(){
 // Entra en una categoría (p. ej. "CROMOS"): a partir de aquí el listado
 // muestra sus subcategorías como carpetas, no colecciones todavía.
 function openCategoryNav(cat){
+  leaveDetail();
   navCategoria = cat; navSubcategoria = null;
   renderCrumbs(); renderCollectionsGrid();
 }
 // Entra en una subcategoría (p. ej. "Fantasía y Rol"): aquí es donde ya
 // aparecen las colecciones reales para abrir.
 function openSubcategoryNav(cat, sub){
+  leaveDetail();
   navCategoria = cat; navSubcategoria = sub;
   renderCrumbs(); renderCollectionsGrid();
 }
