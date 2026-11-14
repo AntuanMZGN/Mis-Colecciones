@@ -494,8 +494,13 @@
   <div class="modal wide">
     <button class="modal-close" onclick="closeModal('modal-import')">✕</button>
     <h2 id="import-title">Importar lista</h2>
-    <div class="field"><label>Archivo Excel (.xlsx) o CSV</label><input type="file" id="import-file" accept=".xlsx,.xls,.csv,.txt"></div>
-    <p class="hint">Necesita una columna con un <b>código único</b> por elemento (número, referencia...). <a id="dl-template">Descargar plantilla CSV de ejemplo</a></p>
+    <div class="field"><label>Archivo: Excel, CSV, texto, PDF o foto de la lista</label><input type="file" id="import-file" accept=".xlsx,.xls,.csv,.txt,.pdf,image/*"></div>
+    <p class="hint">Excel y CSV necesitan una columna con un <b>código único</b> por elemento (número, referencia...). <a id="dl-template">Descargar plantilla CSV de ejemplo</a></p>
+    <div id="import-texto-wrap" style="display:none;">
+      <div class="field"><label>Texto reconocido <small>(corrígelo si hace falta: una línea por elemento, «12 Hulk»)</small></label>
+        <textarea id="import-texto" rows="8" spellcheck="false"></textarea>
+        <p class="hint" id="import-ocr-estado"></p></div>
+    </div>
     <div id="import-mapping" style="display:none;">
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <div class="field" style="flex:1;min-width:200px;"><label>Columna del código (única)</label><select id="import-col-codigo"></select></div>
@@ -586,7 +591,7 @@
       <h3>1. Crear una colección</h3>
       <p>En la pantalla principal pulsa <b>+ Nueva colección</b>. Elige entre <b>lista</b> (cromos, cartas, monedas de una serie: cada elemento se marca como «tengo») o <b>ficha libre</b> (objetos sueltos con los campos que tú definas).</p>
       <h3>2. Importar una lista</h3>
-      <p>Al crear una colección de lista puedes subir un archivo CSV o Excel con columnas <i>Codigo</i> y <i>Nombre</i> (puedes añadir más: país, año, valor...). Más tarde, en <b>⚙️ Ajustes → Actualizar desde un archivo</b>, puedes volver a importar sin perder tus marcas.</p>
+      <p>Al crear una colección de lista puedes subir un archivo CSV o Excel con columnas <i>Codigo</i> y <i>Nombre</i> (puedes añadir más: país, año, valor...). Más tarde, en <b>⚙️ Ajustes → Actualizar desde un archivo</b>, puedes volver a importar sin perder tus marcas. También admite <b>PDF, archivos de texto y fotos</b> de una lista: la app lee el texto, te lo enseña para que lo corrijas y después crea los elementos. Funciona bien con listas impresas sencillas; las páginas muy decoradas no se leen bien.</p>
       <h3>3. Marcar lo que tienes</h3>
       <p>En la tabla, marca la casilla <b>Tengo</b> de cada elemento y <b>Repe</b> si tienes copias de más. <b>Marcar todo / Desmarcar todo</b> actúan solo sobre lo que muestran los filtros.</p>
       <h3>4. Buscar y filtrar</h3>
@@ -1375,7 +1380,7 @@ let imp = { mode: 'new', rows: [], headers: [] };
 
 function openImport(mode){
   imp = { mode, rows: [], headers: [] };
-  $('import-file').value = ''; $('import-mapping').style.display = 'none';
+  $('import-file').value = ''; $('import-mapping').style.display = 'none'; $('import-texto-wrap').style.display = 'none'; $('import-texto').value = '';
   $('import-title').textContent = mode === 'new' ? 'Importar lista: ' + window._pendingCollection.name : 'Actualizar «' + currentCollectionMeta.name + '» desde un archivo';
   $('import-update-opts').style.display = mode === 'update' ? '' : 'none';
   $('btn-import-ok').textContent = mode === 'new' ? 'Crear colección' : 'Aplicar cambios';
@@ -1383,11 +1388,67 @@ function openImport(mode){
 }
 $('dl-template').onclick = () => download('plantilla-checklist.csv', '\uFEFFcodigo;nombre;categoria;notas\r\nA-001;Ejemplo uno;Serie A;\r\nA-002;Ejemplo dos;Serie A;\r\n', 'text/csv');
 
-$('import-file').addEventListener('change', async e => {
-  const file = e.target.files[0]; if (!file) return;
-  try { imp.rows = await readRowsFromFile(file); }
-  catch (err) { showToast('No se pudo leer el archivo. Si es Excel, prueba a guardarlo como CSV.'); return; }
-  if (!imp.rows.length) { showToast('El archivo está vacío'); return; }
+/* ---- Lectura de PDF, fotos (OCR) y texto suelto ---- */
+function cargarScript(url){
+  return new Promise((res, rej) => { const el = document.createElement('script'); el.src = url; el.onload = res; el.onerror = () => rej(new Error('No se pudo cargar ' + url)); document.head.appendChild(el); });
+}
+async function ensurePdfJs(){
+  if (window.pdfjsLib) return;
+  await cargarScript('https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js');
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+}
+async function ensureTesseract(){
+  if (!window.Tesseract) await cargarScript('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js');
+}
+async function ocrImagen(origen){
+  await ensureTesseract();
+  const r = await Tesseract.recognize(origen, 'spa+eng', { logger: m => { if (m.status === 'recognizing text') $('import-ocr-estado').textContent = 'Leyendo la imagen... ' + Math.round(m.progress * 100) + '%'; } });
+  return r.data.text || '';
+}
+async function textoDePdf(file){
+  await ensurePdfJs();
+  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+  let out = '';
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const tc = await (await pdf.getPage(p)).getTextContent(), lineas = new Map();
+    tc.items.forEach(it => { const y = Math.round(it.transform[5] / 3); if (!lineas.has(y)) lineas.set(y, []); lineas.get(y).push(it); });
+    [...lineas.keys()].sort((a, b) => b - a).forEach(y => { out += lineas.get(y).sort((a, b) => a.transform[4] - b.transform[4]).map(i => i.str).join(' ') + '\n'; });
+  }
+  if (out.replace(/\s/g, '').length >= 8) return out;
+  // PDF escaneado (sin texto): se pasa cada página por el reconocedor de imágenes
+  let ocr = '';
+  for (let p = 1; p <= pdf.numPages; p++) {
+    $('import-ocr-estado').textContent = `PDF escaneado: leyendo la página ${p} de ${pdf.numPages}...`;
+    const page = await pdf.getPage(p), vp = page.getViewport({ scale: 2 }), cv = document.createElement('canvas');
+    cv.width = vp.width; cv.height = vp.height;
+    await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+    ocr += await ocrImagen(cv) + '\n';
+  }
+  return ocr;
+}
+// Convierte texto suelto en filas {codigo, nombre}. Entiende «12 Hulk», «12. Hulk», «12 - Hulk»,
+// «12;Hulk», «nº 12 Hulk» y varias parejas en una misma línea («01 Hulk 02 Thor»).
+function rowsFromText(text){
+  const out = [], seen = new Set();
+  const add = (c, n) => { c = String(c).trim(); n = String(n || '').trim().replace(/[\s.\-–:;,|]+$/, ''); if (!c || seen.has(c)) return; seen.add(c); out.push({ codigo: c, nombre: n }); };
+  const COD = '(?:n[º°o.]?\\s*)?([A-Za-z]{0,3}-?\\d{1,4}[A-Za-z]?)';
+  const reParejas = new RegExp('(?:^|\\s)' + COD + '\\s*[.):\\-–]?\\s+([^\\d\\n][^\\d]*?)(?=\\s+(?:n[º°o.]?\\s*)?[A-Za-z]{0,3}-?\\d{1,4}[A-Za-z]?\\s*[.):\\-–]?\\s+[^\\d]|$)', 'gi');
+  const reUna = new RegExp('^' + COD + '\\s*[.):\\-–]?\\s*(.*)$', 'i');
+  const lineas = String(text || '').split(/\r?\n/).map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  lineas.forEach(line => {
+    const d = line.match(/^([^;\t]{1,12})[;\t](.*)$/);
+    if (d) { add(d[1], d[2]); return; }
+    const parejas = [...line.matchAll(reParejas)];
+    if (parejas.length >= 2) { parejas.forEach(p => add(p[1], p[2])); return; }
+    const m = line.match(reUna);
+    if (m) add(m[1], m[2]);
+  });
+  if (!out.length) lineas.forEach((l, i) => { if (l.length > 1) add(String(i + 1), l); });   // lista de nombres sin números
+  return out;
+}
+function aplicarFilasImport(rows){
+  imp.rows = rows;
+  if (!rows.length) { $('import-mapping').style.display = 'none'; return false; }
   imp.headers = Object.keys(imp.rows[0]);
   const opts = imp.headers.map(h => `<option>${escapeHtml(h)}</option>`).join('');
   $('import-col-codigo').innerHTML = opts; $('import-col-nombre').innerHTML = opts;
@@ -1400,6 +1461,40 @@ $('import-file').addEventListener('change', async e => {
   $('imp-opt-estado').checked = hasSpecial && imp.mode === 'new';
   $('import-mapping').style.display = 'block';
   refreshImportPreview();
+  return true;
+}
+function usarTextoImport(texto, desdeUsuario){
+  const ok = aplicarFilasImport(rowsFromText(texto));
+  $('import-ocr-estado').textContent = ok
+    ? `Se han reconocido ${imp.rows.length} elementos. Revisa la vista previa y corrige el texto si algo está mal.`
+    : 'No he reconocido ninguna lista. Escribe o corrige el texto de arriba: una línea por elemento, por ejemplo «12 Hulk».';
+}
+let impTextoTimer = null;
+$('import-texto').addEventListener('input', () => { clearTimeout(impTextoTimer); impTextoTimer = setTimeout(() => usarTextoImport($('import-texto').value, true), 400); });
+$('import-file').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return;
+  $('import-texto-wrap').style.display = 'none'; $('import-mapping').style.display = 'none';
+  const esPdf = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
+  const esImg = /^image\//.test(file.type) || /\.(jpe?g|png|webp|bmp|gif|heic)$/i.test(file.name);
+  try {
+    if (esPdf || esImg) {
+      $('import-texto-wrap').style.display = ''; $('import-texto').value = '';
+      $('import-ocr-estado').textContent = esImg ? 'Leyendo la imagen (la primera vez descarga el reconocedor y puede tardar un poco)...' : 'Leyendo el PDF...';
+      const t = esPdf ? await textoDePdf(file) : await ocrImagen(file);
+      $('import-texto').value = t.trim(); usarTextoImport(t);
+      return;
+    }
+    if (/\.txt$/i.test(file.name)) {
+      const t = await file.text();
+      if (!/[;,\t]/.test((t.split(/\r?\n/)[0] || ''))) { $('import-texto-wrap').style.display = ''; $('import-texto').value = t.trim(); usarTextoImport(t); return; }
+    }
+    const rows = await readRowsFromFile(file);
+    if (!rows.length) { showToast('El archivo está vacío'); return; }
+    aplicarFilasImport(rows);
+  } catch (err) {
+    $('import-ocr-estado').textContent = '';
+    showToast(esPdf || esImg ? 'No se pudo leer el archivo. Comprueba la conexión (necesita descargar el lector) o escribe la lista a mano.' : 'No se pudo leer el archivo. Si es Excel, prueba a guardarlo como CSV.');
+  }
 });
 ['import-col-codigo','import-col-nombre','imp-opt-estado','imp-opt-update','imp-opt-delete'].forEach(id => $(id).addEventListener('change', refreshImportPreview));
 
