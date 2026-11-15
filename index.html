@@ -481,6 +481,10 @@
     <h2 id="fields-title">Campos de la ficha</h2>
     <p class="hint" id="fields-help">Elige qué datos quieres anotar de cada pieza. El primer campo (★) será el título de la ficha.</p>
     <div class="chips" id="fields-presets"></div>
+    <div id="fields-copy" style="display:none;margin:10px 0;">
+      <label class="hint" style="display:block;margin-bottom:4px;">¿Quieres los mismos campos que otra colección?</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;"><select id="fields-copy-from" style="flex:1;min-width:180px;"></select><button class="btn small" type="button" id="btn-fields-copy">Copiar campos</button></div>
+    </div>
     <div id="libre-fields-list" style="margin-top:12px;"></div>
     <button class="btn small" id="btn-add-field">+ Añadir campo</button>
     <div style="margin-top:18px;text-align:right;">
@@ -918,11 +922,36 @@ document.getElementById('copy-tabs').addEventListener('click', e => {
   const b = e.target.closest('[data-copy]'); if (!b) return;
   if (b.dataset.copy === '__new') crearCopia(); else if (b.dataset.copy !== currentCollectionId) openCollection(b.dataset.copy);
 });
+// Si una colección tiene dos campos con la misma clave interna (versiones antiguas), los dos
+// guardan y muestran siempre el mismo dato. Se le da una clave nueva al segundo para separarlos.
+const clavesReparadas = new Set();
+function repararClavesDuplicadas(){
+  collectionsCache.forEach(c => {
+    const fs = c.fields || [];
+    if (clavesReparadas.has(c.id) || !fs.length) return;
+    const usadas = new Set(), nuevos = []; let cambio = false;
+    fs.forEach(f => {
+      let k = f.key;
+      if (!k || usadas.has(k)) {
+        const base = slugify(f.label || 'campo'); let n = 2; k = base;
+        while (usadas.has(k) || fs.some(o => o !== f && o.key === k)) k = base + '_' + (n++);
+        cambio = true;
+      }
+      usadas.add(k); nuevos.push({ ...f, key: k });
+    });
+    if (!cambio) return;
+    clavesReparadas.add(c.id); c.fields = nuevos;
+    updateDoc(doc(db, colPath(), c.id), { fields: nuevos })
+      .then(() => showToast('Se ha corregido un campo repetido en «' + c.name + '»'))
+      .catch(() => clavesReparadas.delete(c.id));
+  });
+}
 function listenCollections(){
   const q = query(collection(db, colPath()), orderBy('createdAt', 'asc'));
   unsubCollections = onSnapshot(q, (snap) => {
     collectionsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     agruparColecciones();
+    repararClavesDuplicadas();
     if (!currentCollectionId) renderCollectionsGrid();
     if (currentCollectionId) {
       currentCollectionMeta = collectionsCache.find(c => c.id === currentCollectionId) || currentCollectionMeta;
@@ -1242,7 +1271,13 @@ function uniqueKey(label, used){
 // Conserva la clave de los campos ya existentes y crea claves únicas para los nuevos.
 function finalizeFields(draft){
   const used = new Set(draft.filter(f => f.key).map(f => f.key));
-  return draft.filter(f => f.label.trim()).map(f => ({ key: f.key || uniqueKey(f.label, used), label: f.label.trim(), type: f.type || 'text' }));
+  const vistas = new Set();
+  return draft.filter(f => f.label.trim()).map(f => {
+    let key = f.key;
+    if (!key || vistas.has(key)) key = uniqueKey(f.label, used);   // clave nueva si falta o está repetida
+    vistas.add(key);
+    return { key, label: f.label.trim(), type: f.type || 'text' };
+  });
 }
 function renderFieldsEditor(){
   const box = document.getElementById('libre-fields-list');
@@ -1290,6 +1325,16 @@ document.getElementById('fields-presets').addEventListener('click', e => {
   fieldsDraft = mkFields(PRESETS[c.dataset.p]); renderFieldsEditor();
 });
 
+document.getElementById('btn-fields-copy').onclick = () => {
+  const src = collectionsCache.find(c => c.id === document.getElementById('fields-copy-from').value);
+  if (!src) return;
+  const mias = fieldsDraft, quitar = mias.filter(f => f.label.trim() && !src.fields.some(sf => norm(sf.label) === norm(f.label)));
+  if (quitar.length && !confirm('Se quitarán de la lista estos campos, que «' + src.name + '» no tiene: ' + quitar.map(f => f.label).join(', ') + '.\n\nSus datos no se borran, y nada se guarda hasta que pulses «Guardar campos».\n\n¿Continuar?')) return;
+  fieldsUndoSnapshot();
+  fieldsDraft = src.fields.map(sf => { const propio = mias.find(f => norm(f.label) === norm(sf.label)); return propio ? { ...propio, type: sf.type || propio.type } : { label: sf.label, type: sf.type || 'text' }; });
+  renderFieldsEditor();
+  showToast('Campos copiados de «' + src.name + '». Pulsa «Guardar campos» para aplicarlos.');
+};
 function selectNewCollectionMode(mode){
   const nameEl = document.getElementById('nc-name'), name = nameEl.value.trim();
   const icon = document.getElementById('nc-icon').value.trim();
@@ -1302,6 +1347,7 @@ function selectNewCollectionMode(mode){
     fieldsCtx = 'new'; fieldsDraft = mkFields(PRESETS['Genérica']);
     document.getElementById('fields-title').textContent = 'Campos de la ficha';
     document.getElementById('fields-presets').style.display = '';
+    document.getElementById('fields-copy').style.display = 'none';
     document.getElementById('btn-fields-ok').textContent = 'Crear colección';
     fieldsUndoReset();
     renderFieldsEditor(); openModal('modal-libre-fields');
@@ -2000,12 +2046,12 @@ function openEditItem(itemId){
     html += `<div class="field"><label>Código</label><input id="f_codigo" value="${escapeHtml(item?.codigo||'')}"></div>`;
     html += `<div class="field"><label>Nombre</label><input id="f_nombre" value="${escapeHtml(item?.nombre||'')}"></div>`;
   }
-  fields.forEach(f => {
+  fields.forEach((f, idx) => {
     const val = item?.campos?.[f.key] || '';
     if (f.type === 'textarea') {
-      html += `<div class="field full"><label>${escapeHtml(f.label)}</label><textarea id="f_${f.key}" rows="2">${escapeHtml(val)}</textarea></div>`;
+      html += `<div class="field full"><label>${escapeHtml(f.label)}</label><textarea id="fc_${idx}" rows="2">${escapeHtml(val)}</textarea></div>`;
     } else {
-      html += `<div class="field"><label>${escapeHtml(f.label)}</label><input id="f_${f.key}" type="${f.type==='number'?'number':f.type==='date'?'date':'text'}" value="${escapeHtml(val)}"></div>`;
+      html += `<div class="field"><label>${escapeHtml(f.label)}</label><input id="fc_${idx}" type="${f.type==='number'?'number':f.type==='date'?'date':'text'}" value="${escapeHtml(val)}"></div>`;
     }
   });
   if (currentCollectionMeta.type === 'checklist') {
@@ -2047,8 +2093,8 @@ document.getElementById('item-foto-input').addEventListener('change', async (e) 
 async function saveItemFromModal(){
   const fields = currentCollectionMeta.fields || [];
   const campos = {};
-  fields.forEach(f => {
-    const el = document.getElementById('f_' + f.key);
+  fields.forEach((f, idx) => {
+    const el = document.getElementById('fc_' + idx);
     if (el) campos[f.key] = el.value;
   });
 
@@ -3010,6 +3056,10 @@ $('act-fields').onclick = () => {
   $('fields-title').textContent = 'Campos de «' + currentCollectionMeta.name + '»';
   $('fields-help').textContent = 'Renombra, reordena, cambia el tipo o quita campos. Los datos ya guardados no se pierden: si quitas un campo y luego lo vuelves a crear con el mismo nombre, sus datos reaparecen.';
   $('fields-presets').style.display = 'none'; $('btn-fields-ok').textContent = 'Guardar campos';
+  const otras = collectionsCache.filter(c => c.id !== currentCollectionId && (c.fields || []).length)
+    .sort((a, b) => ((b.categoria || '') === (currentCollectionMeta.categoria || '')) - ((a.categoria || '') === (currentCollectionMeta.categoria || '')) || (a.name || '').localeCompare(b.name || '', 'es'));
+  $('fields-copy-from').innerHTML = otras.map(c => `<option value="${c.id}">${escapeHtml(c.name)} (${c.fields.map(f => f.label).join(', ')})</option>`).join('');
+  $('fields-copy').style.display = otras.length ? '' : 'none';
   fieldsUndoReset();
   renderFieldsEditor(); openModal('modal-libre-fields');
 };
