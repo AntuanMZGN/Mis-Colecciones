@@ -542,6 +542,8 @@
     <div class="actions-list">
       <button class="btn" id="act-fields">🧩 Editar campos (columnas) de la colección</button>
       <button class="btn" id="act-bulkfill">✏️ Rellenar un campo en todos los elementos</button>
+      <button class="btn" id="act-photos">📷 Cargar fotos en bloque (por código)</button>
+      <input type="file" id="photos-bulk-input" accept=".json,image/*" multiple style="display:none">
       <button class="btn" id="act-update">🔄 Actualizar desde un archivo (sin perder tus marcas)</button>
       <button class="btn" id="act-csv">⬇️ Exportar a CSV</button>
       <button class="btn" id="act-xlsx">⬇️ Exportar a Excel (.xlsx)</button>
@@ -1324,6 +1326,36 @@ document.getElementById('fields-presets').addEventListener('click', e => {
   fieldsUndoSnapshot();
   fieldsDraft = mkFields(PRESETS[c.dataset.p]); renderFieldsEditor();
 });
+
+
+// ---- Fotos en bloque: archivo .json {codigo: foto} o imágenes cuyo nombre es el código ----
+document.getElementById('act-photos').onclick = () => { document.getElementById('photos-bulk-input').value = ''; document.getElementById('photos-bulk-input').click(); };
+document.getElementById('photos-bulk-input').onchange = async (e) => {
+  const files = [...e.target.files]; if (!files.length || !currentCollectionId) return;
+  const fotos = {};
+  try {
+    for (const f of files) {
+      if (/\.json$/i.test(f.name)) { Object.assign(fotos, JSON.parse(await f.text())); }
+      else { fotos[f.name.replace(/\.[^.]+$/, '').trim()] = await resizeImage(f, 600, 0.7); }
+    }
+  } catch (err) { showToast('No he podido leer el archivo de fotos'); return; }
+  const codesOf = i => [i.codigo, ...Object.values(i.campos || {})].map(v => String(v ?? '').trim()).filter(Boolean);
+  const ops = []; let ok = 0, ya = 0; const usados = new Set();
+  currentItems.forEach(i => {
+    const c = codesOf(i).find(c => fotos[c]); if (!c) return;
+    usados.add(c);
+    if (i.tieneFoto) { ya++; return; }
+    ops.push(['set', doc(db, photosPath(currentCollectionId), i.id), { data: fotos[c], updatedAt: serverTimestamp() }]);
+    ops.push(['update', doc(db, itemsPath(currentCollectionId), i.id), { tieneFoto: true }]);
+    ok++;
+  });
+  const sin = Object.keys(fotos).filter(c => !usados.has(c)).length;
+  if (!ok) { showToast(ya ? 'Todas las figuras que coinciden ya tenían foto' : 'Ninguna foto coincide con los códigos de esta colección'); return; }
+  try { progress('Subiendo fotos...', 0, ops.length); await commitOps(ops, 'Subiendo fotos...'); }
+  finally { endProgress(); }
+  closeModal('modal-settings');
+  showToast(`Fotos añadidas: ${ok}` + (ya ? ` · ya tenían foto: ${ya}` : '') + (sin ? ` · sin figura en la colección: ${sin}` : ''));
+};
 
 document.getElementById('btn-fields-copy').onclick = () => {
   const src = collectionsCache.find(c => c.id === document.getElementById('fields-copy-from').value);
